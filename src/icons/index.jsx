@@ -13,3 +13,14 @@ export const InvoiceIcon = () => (
 export const BackIcon = ({ className }) => (
   <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className={className || "w-6 h-6"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
 );
+export const ClockIcon = ({ className }) => (
+  <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className={className || "w-12 h-12"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+);
+
+export const CheckCircleIcon = ({ className }) => (
+  <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className={className || "w-12 h-12"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+);
+
+export const BlockedIcon = ({ className }) => (
+  <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className={className || "w-12 h-12"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+);

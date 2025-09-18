@@ -1,19 +1,22 @@
-// src/views/TableView.jsx
 import { BackIcon } from '../icons';
 
 function TableView({ onBack, data }) {
-  const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const days = ['L', 'M', 'M', 'J', 'V', 'S'];
 
-  // Función para generar las cabeceras de los días
+  // Función para generar las 12 cabeceras de los días (Lun-Sab x2)
   const renderDayHeaders = () => {
     const headers = [];
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 12; i++) {
       const date = new Date(data.startDate);
-      // Ojo: usamos setUTCDate para evitar problemas de zona horaria
-      date.setUTCDate(date.getUTCDate() + i);
+      // Calculamos el desfase de días, saltando los domingos
+      const offset = i + Math.floor(i / 6);
+      date.setUTCDate(date.getUTCDate() + offset);
+      
+      const isLastDayOfWeek = (i + 1) % 6 === 0;
+
       headers.push(
-        <th key={i} className="p-2 border-l text-center">
-          <span className="text-xs font-medium text-gray-500">{days[i % 7]}</span>
+        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
+          <span className="text-xs font-medium text-gray-500">{days[i % 6]}</span>
           <span className="block text-sm font-semibold text-gray-800">{date.getUTCDate()}</span>
         </th>
       );
@@ -33,27 +36,29 @@ function TableView({ onBack, data }) {
         </div>
       </header>
 
-      {/* Contenedor de la tabla */}
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-        <div className="overflow-x-auto"> {/* Permite scroll horizontal en móviles */}
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-200 border-b-2 border-gray-300">
               <tr>
-                <th className="p-2 text-left font-semibold sticky left-0 bg-gray-50 z-10 w-40">Empleado</th>
+                <th className="p-2 text-left font-semibold text-gray-700 sticky left-0 bg-gray-200 z-10 w-40">Empleado</th>
                 {renderDayHeaders()}
-                <th className="p-2 border-l font-semibold w-24">Total</th>
+                <th className="p-2 border-l border-gray-300 font-semibold text-gray-700 w-24">Total</th>
               </tr>
             </thead>
             <tbody>
               {data.employees.map((employee) => (
-                <tr key={employee.name} className="border-b last:border-b-0 hover:bg-gray-50">
-                  <td className="p-2 font-medium sticky left-0 bg-white hover:bg-gray-50 z-10">{employee.name}</td>
-                  {employee.hours.map((hour, index) => (
-                    <td key={index} className="p-2 text-center border-l">
-                      {hour || <span className="text-gray-400">-</span>}
-                    </td>
-                  ))}
-                  <td className="p-2 text-center border-l font-bold text-indigo-600">{employee.total.toFixed(1)}</td>
+                <tr key={employee.name} className="border-b border-gray-200 last:border-b-0">
+                  <td className="p-2 font-medium text-gray-800 sticky left-0 bg-gray-100 hover:bg-gray-200 z-10">{employee.name}</td>
+                  {employee.hours.map((hour, index) => {
+                    const isLastDayOfWeek = (index + 1) % 6 === 0;
+                    return (
+                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
+                        {hour || <span className="text-gray-400">-</span>}
+                      </td>
+                    )
+                  })}
+                  <td className="p-2 text-center border-l border-gray-200 font-bold text-indigo-600">{employee.total.toFixed(1)}</td>
                 </tr>
               ))}
             </tbody>

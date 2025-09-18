@@ -7,6 +7,7 @@ import TableView from './views/TableView';
 import PunchView from './views/PunchView';
 import InvoicesView from './views/InvoicesView';
 
+import { timesheetData } from './data/timesheet';
 
 //Menu de opciones 
 function MainMenu({onCardClick}) {
@@ -52,7 +53,7 @@ function App() {
   const renderView = () => {
     switch (currentView) {
       case 'tableView':
-        return <TableView onBack={() => setCurrentView('home')} />;
+        return <TableView onBack={() => setCurrentView('home')} data={timesheetData} />;
       case 'punchView':
         return <PunchView onBack={() => setCurrentView('home')} />;
       case 'invoicesView':

@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chuleta de Tailwind CSS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        code {
+            background-color: #f3f4f6;
+            color: #4338ca;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+
+        <header class="border-b pb-4 mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">Chuleta de Clases Esenciales de Tailwind</h1>
+            <p class="text-gray-600 mt-1">Tu referencia rápida para construir interfaces como un profesional.</p>
+        </header>
+
+        <main class="space-y-8">
+
+            <!-- Espaciado -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">1. Espaciado (Padding y Margin)</h2>
+                <ul class="list-disc list-inside space-y-3">
+                    <li><code>p-{tamaño}</code>: Añade <strong>padding</strong> (relleno interno). Ejemplos: <code>p-4</code>, <code>px-4</code> (eje X), <code>py-2</code> (eje Y), <code>pt-6</code> (top).</li>
+                    <li><code>m-{tamaño}</code>: Añade <strong>margin</strong> (margen externo). Ejemplos: <code>m-8</code>, <code>mx-auto</code> (para centrar horizontalmente).</li>
+                    <li><code>space-y-{tamaño}</code>: Añade un espacio vertical <strong>entre</strong> elementos hijos. Muy útil para listas.</li>
+                </ul>
+            </section>
+
+            <!-- Dimensiones -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">2. Dimensiones (Ancho y Alto)</h2>
+                <ul class="list-disc list-inside space-y-3">
+                    <li><code>w-{tamaño}</code>: Define el <strong>width</strong> (ancho). Ejemplos: <code>w-full</code>, <code>w-1/2</code>, <code>max-w-2xl</code> (ancho máximo).</li>
+                    <li><code>h-{tamaño}</code>: Define el <strong>height</strong> (alto). Ejemplos: <code>h-full</code>, <code>h-screen</code>.</li>
+                </ul>
+            </section>
+
+            <!-- Layout -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">3. Layout (Flexbox y Grid)</h2>
+                <ul class="list-disc list-inside space-y-3">
+                    <li><code>flex</code>: Activa Flexbox. Clases de ayuda: <code>flex-col</code>, <code>items-center</code>, <code>justify-center</code>, <code>justify-between</code>.</li>
+                    <li><code>grid</code>: Activa Grid. Clases de ayuda: <code>grid-cols-3</code> (3 columnas), <code>gap-4</code> (espacio entre elementos).</li>
+                </ul>
+            </section>
+
+            <!-- Tipografía -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">4. Tipografía (Texto)</h2>
+                <ul class="list-disc list-inside space-y-3">
+                    <li><code>text-{tamaño}</code>: Tamaño de la fuente. Ejemplos: <code>text-sm</code>, <code>text-base</code>, <code>text-lg</code>, <code>text-2xl</code>.</li>
+                    <li><code>font-{grosor}</code>: Grosor de la fuente. Ejemplos: <code>font-medium</code>, <code>font-semibold</code>, <code>font-bold</code>.</li>
+                    <li><code>text-{color}-{intensidad}</code>: Color del texto. Ejemplos: <code>text-gray-500</code>, <code>text-indigo-600</code>.</li>
+                </ul>
+            </section>
+
+            <!-- Fondos y Bordes -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">5. Fondos y Bordes</h2>
+                <ul class="list-disc list-inside space-y-3">
+                    <li><code>bg-{color}-{intensidad}</code>: Color de fondo. Ejemplos: <code>bg-white</code>, <code>bg-gray-100</code>.</li>
+                    <li><code>border</code>: Añade un borde. Clases de ayuda: <code>border-b</code> (solo abajo), <code>border-gray-300</code> (color).</li>
+                    <li><code>rounded-{tamaño}</code>: Redondea las esquinas. Ejemplos: <code>rounded-lg</code>, <code>rounded-full</code>.</li>
+                </ul>
+            </section>
+
+            <!-- Sombras e Interactividad -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">6. Sombras e Interactividad</h2>
+                <ul class="list-disc list-inside space-y-3">
+                    <li><code>shadow-{tamaño}</code>: Añade una sombra. Ejemplos: <code>shadow-md</code>, <code>shadow-lg</code>.</li>
+                    <li><code>hover:{clase}</code>: Aplica un estilo al pasar el ratón. Ejemplo: <code>hover:bg-blue-700</code>.</li>
+                    <li><code>cursor-pointer</code>: Muestra el cursor de "manita" al pasar el ratón.</li>
+                </ul>
+            </section>
+
+        </main>
+    </div>
+</body>
+</html>

@@ -8,6 +8,7 @@ import PunchView from './views/PunchView';
 import InvoicesView from './views/InvoicesView';
 
 import { timesheetData } from './data/timesheet';
+import { mockInvoiceData } from './data/invoice';
 
 //Menu de opciones 
 function MainMenu({onCardClick}) {
@@ -57,7 +58,7 @@ function App() {
       case 'punchView':
         return <PunchView onBack={() => setCurrentView('home')} />;
       case 'invoicesView':
-        return <InvoicesView onBack={() => setCurrentView('home')} />;
+        return <InvoicesView onBack={() => setCurrentView('home')} data={mockInvoiceData} />;
       case 'home':
       default:
         return <MainMenu onCardClick={setCurrentView} />;

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import Card from './components/Card';
 import {ScheduleIcon, PunchIcon, InvoiceIcon} from './icons';
@@ -51,6 +51,38 @@ function MainMenu({onCardClick}) {
 
 function App() {
   const [currentView, setCurrentView] = useState('home');
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => {
+    // Definimos una función asíncrona dentro del efecto
+    const fetchEmployees = async () => {
+      try {
+        // Hacemos la petición a nuestro backend
+        const response = await fetch('http://localhost:3001/api/employees');
+
+        // Comprobamos si la respuesta fue exitosa
+        if (!response.ok) {
+          throw new Error('La respuesta de la red no fue OK');
+        }
+
+        // Convertimos la respuesta a formato JSON
+        const data = await response.json();
+
+        // Guardamos los datos en nuestro estado
+        setEmployees(data);
+
+      } catch (error) {
+        console.error("Error al obtener los empleados:", error);
+        // Aquí podríamos establecer un estado de error para mostrar un mensaje al usuario
+      }
+    };
+
+    // Llamamos a la función para que se ejecute
+    fetchEmployees();
+  }, []); // <-- El array vacío significa que este efecto se ejecutará SÓLO UNA VEZ, cuando el componente se monte.
+
+
+
   const renderView = () => {
     switch (currentView) {
       case 'tableView':

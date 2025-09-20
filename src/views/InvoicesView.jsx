@@ -33,21 +33,49 @@ function InvoiceView({onBack, data}) {
                 </section>
 
                 {/* Tabla de turnos */}
-                <section>
-                    <div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-
-                            </tbody>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr>
+                            <th className="p-3 text-left font-semibold text-gray-600">Fecha</th>
+                            <th className="p-3 text-left font-semibold text-gray-600">Descripción</th>
+                            <th className="p-3 text-center font-semibold text-gray-600">Horas</th>
+                            <th className="p-3 text-right font-semibold text-gray-600">Tarifa</th>
+                            <th className="p-3 text-right font-semibold text-gray-600">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.shifts.map((shift, index) => (
+                            <tr key={index} className="border-b last:border-b-0">
+                                <td className="p-3 whitespace-nowrap">{shift.date}</td>
+                                <td className="p-3">{shift.description}</td>
+                                <td className="p-3 text-center">{shift.duration.toFixed(2)}</td>
+                                <td className="p-3 text-right">${shift.rate.toFixed(2)}</td>
+                                <td className="p-3 text-right font-medium text-gray-800">${shift.gross.toFixed(2)}</td>
+                            </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="bg-gray-50 font-bold">
+                            <tr>
+                            <td colSpan="3"></td>
+                            <td className="p-3 text-right text-gray-600">Subtotal</td>
+                            <td className="p-3 text-right">${data.subtotal.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                            <td colSpan="3"></td>
+                            <td className="p-3 text-right text-gray-600">GST (10%)</td>
+                            <td className="p-3 text-right">${data.gst.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                            <td colSpan="3"></td>
+                            <td className="p-3 text-right text-lg text-gray-800">TOTAL</td>
+                            <td className="p-3 text-right text-lg text-indigo-600">${data.total.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
                         </table>
                     </div>
-                </section>
+                </div>
             </main>
         </div>
     );

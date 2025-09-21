@@ -1,21 +1,60 @@
+import { useState, useEffect } from "react";
 import { BackIcon } from '../icons';
 
-function TableView({ onBack, data }) {
+const getFortnightStartDate = () => {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // Domingo=0, Lunes=1
+  const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuste para que la semana empiece en Lunes
+  const monday = new Date(today.setDate(diff));
+  return monday.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+};
+
+function TableView({ onBack }) {
+  const [timesheetData, setTimesheetData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTimesheet = async () => {
+      const startDate = getFortnightStartDate();
+      try {
+        const response = await fetch(`http://localhost:3001/api/employees/timesheet?startDate=${startDate}`);
+        if (!response.ok) {
+          throw new Error('Error al obtener los datos del timesheet');
+        }
+        const data = await response.json();
+        setTimesheetData(data);
+      } catch (error) {
+        console.error(error);
+        // Aquí podríamos poner un estado de error
+      } finally {
+        setIsLoading(false); // Ocurra lo que ocurra, dejamos de cargar
+      }
+    };
+
+    fetchTimesheet();
+  }, []); // El array vacío asegura que esto se ejecute solo una vez
+
+  if (isLoading) {
+    return <div>Cargando horarios...</div>;
+  }
+
+  if (!timesheetData) {
+    return <div>Error al cargar los datos.</div>;
+  }
+
+  const { data } = { data: timesheetData }; // Renombramos para reusar el código
   const days = ['L', 'M', 'M', 'J', 'V', 'S'];
 
-  // Función para generar las 12 cabeceras de los días (Lun-Sab x2)
   const renderDayHeaders = () => {
+    // ... (esta función no cambia)
     const headers = [];
     for (let i = 0; i < 12; i++) {
       const date = new Date(data.startDate);
-      // Calculamos el desfase de días, saltando los domingos
       const offset = i + Math.floor(i / 6);
       date.setUTCDate(date.getUTCDate() + offset);
-      
       const isLastDayOfWeek = (i + 1) % 6 === 0;
-
       headers.push(
-        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
+        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
           <span className="text-xs font-medium text-gray-500">{days[i % 6]}</span>
           <span className="block text-sm font-semibold text-gray-800">{date.getUTCDate()}</span>
         </th>
@@ -53,8 +92,8 @@ function TableView({ onBack, data }) {
                   {employee.hours.map((hour, index) => {
                     const isLastDayOfWeek = (index + 1) % 6 === 0;
                     return (
-                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
-                        {hour || <span className="text-gray-400">-</span>}
+                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
+                        {hour !== null ? hour.toFixed(1) : <span className="text-gray-400">-</span>}
                       </td>
                     )
                   })}
@@ -67,6 +106,7 @@ function TableView({ onBack, data }) {
       </div>
     </div>
   );
+
 }
 
 export default TableView;

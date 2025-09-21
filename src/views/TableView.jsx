@@ -54,7 +54,7 @@ function TableView({ onBack }) {
       date.setUTCDate(date.getUTCDate() + offset);
       const isLastDayOfWeek = (i + 1) % 6 === 0;
       headers.push(
-        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
+        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
           <span className="text-xs font-medium text-gray-500">{days[i % 6]}</span>
           <span className="block text-sm font-semibold text-gray-800">{date.getUTCDate()}</span>
         </th>
@@ -92,7 +92,7 @@ function TableView({ onBack }) {
                   {employee.hours.map((hour, index) => {
                     const isLastDayOfWeek = (index + 1) % 6 === 0;
                     return (
-                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
+                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
                         {hour !== null ? hour.toFixed(1) : <span className="text-gray-400">-</span>}
                       </td>
                     )

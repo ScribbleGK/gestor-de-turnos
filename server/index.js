@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import employeeRoutes from './routes/employees.js'; 
+import invoiceRoutes from './routes/invoices.js';
 
 //Iniciando servidor
 const app = express();
@@ -11,8 +12,8 @@ app.use(cors());
 app.use(express.json());
 
 //--Rutas--
-//Obtener los empleados
 app.use('/api/employees', employeeRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 //Prueba
 app.get('/', (req, res) => {

@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import { BackIcon } from '../icons';
+import { getFortnightStartDate } from '../utils/date';
 
-const getFortnightStartDate = () => {
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // Domingo=0, Lunes=1
-  const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuste para que la semana empiece en Lunes
-  const monday = new Date(today.setDate(diff));
-  return monday.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-};
 
 function TableView({ onBack }) {
   const [timesheetData, setTimesheetData] = useState(null);

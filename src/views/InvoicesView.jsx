@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BackIcon, DownloadIcon } from '../icons';
-
-// Función de ayuda para obtener el inicio de la quincena actual o pasada
-const getFortnightStartDate = () => {
-  // Por ahora, para que coincida con nuestros datos de prueba, usaremos una fecha fija.
-  // Más adelante, podemos hacer esto dinámico.
-  return '2025-09-15'; 
-};
+import { getFortnightStartDate } from '../utils/date';
 
 function InvoicesView({ onBack }) {
   const [invoiceData, setInvoiceData] = useState(null);

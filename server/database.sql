@@ -41,3 +41,15 @@ CREATE TABLE invoice_config (
     hour_rate DECIMAL(10, 2) NOT NULL,
     CONSTRAINT id_check CHECK (id = 1)
 );
+
+-- Añade asistencias de Lunes a Jueves (mañana)
+INSERT INTO attendances (employee_id, punch_time, shift_type, is_overtime) VALUES
+(1, '2025-09-15 07:30:00', 'morning', FALSE),
+(1, '2025-09-16 07:32:00', 'morning', FALSE),
+(1, '2025-09-17 07:28:00', 'morning', TRUE),
+(1, '2025-09-18 07:35:00', 'morning', FALSE);
+
+-- Añade dos asistencias para el Viernes (mañana y noche)
+INSERT INTO attendances (employee_id, punch_time, shift_type, is_overtime) VALUES
+(1, '2025-09-19 07:30:00', 'morning', FALSE),
+(1, '2025-09-19 18:00:00', 'evening', FALSE);

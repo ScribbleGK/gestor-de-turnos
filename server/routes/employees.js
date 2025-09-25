@@ -3,85 +3,86 @@ import pool from '../db.js';
 
 const router = express.Router();
 
-// Ruta para obtener todos los empleados
 router.get('/', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM employees ORDER BY surname, name');
-    res.json(rows);
-  } catch (error) {
-    console.error('Error al obtener empleados:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
+    try {
+      const [rows] = await pool.query('SELECT * FROM employees ORDER BY surname, name');
+      res.json(rows);
+    } catch (error) {
+      console.error('Error al obtener empleados:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
 });
 
-// GET /api/employees/timesheet?startDate=YYYY-MM-DD
 router.get('/timesheet', async (req, res) => {
   const { startDate } = req.query;
-
   if (!startDate) {
     return res.status(400).json({ error: 'Se requiere una fecha de inicio (startDate).' });
   }
-
   try {
+    // CORRECCIÓN: Volvemos a LEFT JOIN para incluir a todos los empleados activos.
+    // Y usamos un separador seguro ('|') en GROUP_CONCAT.
     const query = `
-      SELECT e.id, e.name, e.surname, a.punch_time, a.is_overtime
+      SELECT 
+        e.id, 
+        e.name, 
+        e.surname,
+        GROUP_CONCAT(CONCAT_WS('|', a.punch_time, a.is_overtime)) as punches
       FROM employees e
       LEFT JOIN attendances a 
-        ON e.id = a.employee_id 
+        ON e.id = a.employee_id
         AND a.punch_time >= ? 
         AND a.punch_time < DATE_ADD(?, INTERVAL 14 DAY)
-      ORDER BY e.surname, e.name, a.punch_time;
+      WHERE 
+        e.active = TRUE
+      GROUP BY e.id
+      ORDER BY e.surname, e.name;
     `;
     const [rows] = await pool.query(query, [startDate, startDate]);
-    const employeesMap = new Map();
-    const [allEmployees] = await pool.query('SELECT id, name, surname FROM employees ORDER BY surname, name');
 
-    allEmployees.forEach(emp => {
-      employeesMap.set(emp.id, {
-        name: `${emp.name} ${emp.surname}`.trim(),
-        hours: Array(12).fill(null),
-        total: 0
-      });
-    });
+    const employeesData = rows.map(row => {
+        const employee = {
+            name: `${row.name} ${row.surname}`.trim(),
+            hours: Array(12).fill(null),
+            total: 0
+        };
 
-    rows.forEach(row => {
-      if (!row.punch_time) return;
+        // CORRECCIÓN: Manejamos el caso en que un empleado no tiene asistencias (punches será null).
+        if (row.punches) {
+            const punches = row.punches.split(',');
+            punches.forEach(punch => {
+                // CORRECCIÓN: Usamos el separador seguro '|'.
+                const [punchTimeString, isOvertimeString] = punch.split('|');
+                const punchDate = new Date(punchTimeString);
+                const isOvertime = isOvertimeString === '1';
 
-      const employeeData = employeesMap.get(row.id);
-      if (!employeeData) return;
+                if (punchDate.getDay() === 0) return;
 
-      const punchDate = new Date(row.punch_time);
-      if (punchDate.getDay() === 0) return;
+                const startDateObj = new Date(startDate);
+                const diffTime = punchDate.setHours(0,0,0,0) - startDateObj.setHours(0,0,0,0);
+                const dayDiff = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const weeksPassed = Math.floor(dayDiff / 7);
+                const dayIndex = dayDiff - weeksPassed;
 
-      const startDateObj = new Date(startDate);
-      const diffTime = punchDate.setHours(0,0,0,0) - startDateObj.setHours(0,0,0,0);
-      const dayDiff = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      const weeksPassed = Math.floor(dayDiff / 7);
-      const dayIndex = dayDiff - weeksPassed;
-
-      if (dayIndex >= 0 && dayIndex < 12) {
-        const hours = row.is_overtime ? 2.4 : 2.0;
-
-        // --- INICIO DE LA CORRECCIÓN ---
-        if (employeeData.hours[dayIndex] === null) {
-          // Si no hay horas registradas para este día, las establecemos.
-          employeeData.hours[dayIndex] = hours;
-        } else {
-          // Si ya hay horas, las sumamos.
-          employeeData.hours[dayIndex] += hours;
+                if (dayIndex >= 0 && dayIndex < 12) {
+                    const hours = isOvertime ? 2.4 : 2.0;
+                    if (employee.hours[dayIndex] === null) {
+                        employee.hours[dayIndex] = hours;
+                    } else {
+                        employee.hours[dayIndex] += hours;
+                    }
+                }
+            });
         }
-        // --- FIN DE LA CORRECCIÓN ---
-      }
-    });
-
-    const result = Array.from(employeesMap.values()).map(emp => {
-        const total = emp.hours.reduce((sum, h) => sum + (h || 0), 0);
-        return { ...emp, total: parseFloat(total.toFixed(1)) };
+        
+        const total = employee.hours.reduce((sum, h) => sum + (h || 0), 0);
+        employee.total = parseFloat(total.toFixed(1));
+        
+        return employee;
     });
 
     res.json({
       startDate,
-      employees: result
+      employees: employeesData
     });
 
   } catch (error) {

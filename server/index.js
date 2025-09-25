@@ -3,6 +3,7 @@ import cors from 'cors';
 import employeeRoutes from './routes/employees.js'; 
 import invoiceRoutes from './routes/invoices.js';
 import attendanceRoutes from './routes/attendances.js';
+import authRoutes from './routes/auth.js';
 
 //Iniciando servidor
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use('/api/employees', employeeRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/attendances', attendanceRoutes);
+app.use('/api/auth', authRoutes); 
 
 //Prueba
 app.get('/', (req, res) => {

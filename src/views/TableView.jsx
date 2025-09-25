@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import { BackIcon } from '../icons';
 import { getFortnightStartDate } from '../utils/date';
-
 
 function TableView({ onBack }) {
   const [timesheetData, setTimesheetData] = useState(null);
@@ -19,28 +18,26 @@ function TableView({ onBack }) {
         setTimesheetData(data);
       } catch (error) {
         console.error(error);
-        // Aquí podríamos poner un estado de error
       } finally {
-        setIsLoading(false); // Ocurra lo que ocurra, dejamos de cargar
+        setIsLoading(false);
       }
     };
 
     fetchTimesheet();
-  }, []); // El array vacío asegura que esto se ejecute solo una vez
+  }, []);
 
   if (isLoading) {
-    return <div>Cargando horarios...</div>;
+    return <div className="p-4">Cargando horarios...</div>;
   }
 
   if (!timesheetData) {
-    return <div>Error al cargar los datos.</div>;
+    return <div className="p-4">Error al cargar los datos.</div>;
   }
 
-  const { data } = { data: timesheetData }; // Renombramos para reusar el código
+  const { data } = { data: timesheetData };
   const days = ['L', 'M', 'M', 'J', 'V', 'S'];
 
   const renderDayHeaders = () => {
-    // ... (esta función no cambia)
     const headers = [];
     for (let i = 0; i < 12; i++) {
       const date = new Date(data.startDate);
@@ -48,7 +45,7 @@ function TableView({ onBack }) {
       date.setUTCDate(date.getUTCDate() + offset);
       const isLastDayOfWeek = (i + 1) % 6 === 0;
       headers.push(
-        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
+        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
           <span className="text-xs font-medium text-gray-500">{days[i % 6]}</span>
           <span className="block text-sm font-semibold text-gray-800">{date.getUTCDate()}</span>
         </th>
@@ -86,7 +83,7 @@ function TableView({ onBack }) {
                   {employee.hours.map((hour, index) => {
                     const isLastDayOfWeek = (index + 1) % 6 === 0;
                     return (
-                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
+                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
                         {hour !== null ? hour.toFixed(1) : <span className="text-gray-400">-</span>}
                       </td>
                     )
@@ -100,7 +97,6 @@ function TableView({ onBack }) {
       </div>
     </div>
   );
-
 }
 
 export default TableView;

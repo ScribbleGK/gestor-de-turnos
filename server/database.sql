@@ -42,14 +42,28 @@ CREATE TABLE invoice_config (
     CONSTRAINT id_check CHECK (id = 1)
 );
 
--- Añade asistencias de Lunes a Jueves (mañana)
-INSERT INTO attendances (employee_id, punch_time, shift_type, is_overtime) VALUES
-(1, '2025-09-15 07:30:00', 'morning', FALSE),
-(1, '2025-09-16 07:32:00', 'morning', FALSE),
-(1, '2025-09-17 07:28:00', 'morning', TRUE),
-(1, '2025-09-18 07:35:00', 'morning', FALSE);
+-- Actualiza el nombre del empleado de prueba con id = 1
+UPDATE employees
+SET name = 'ScribbleGK', surname = 'Dev', second_name = NULL, second_surname = NULL
+WHERE id = 1;
 
--- Añade dos asistencias para el Viernes (mañana y noche)
+-- Purgamos la tabla para empezar de cero y evitar duplicados
+TRUNCATE TABLE attendances;
+
+-- Insertamos una quincena completa de asistencias de prueba
 INSERT INTO attendances (employee_id, punch_time, shift_type, is_overtime) VALUES
-(1, '2025-09-19 07:30:00', 'morning', FALSE),
-(1, '2025-09-19 18:00:00', 'evening', FALSE);
+-- Semana 1
+(1, '2025-09-15 07:30:00', 'morning', FALSE), -- Lunes
+(1, '2025-09-16 07:32:00', 'morning', FALSE), -- Martes
+(1, '2025-09-17 07:28:00', 'morning', TRUE),  -- Miércoles (Overtime)
+(1, '2025-09-18 07:35:00', 'morning', FALSE), -- Jueves
+(1, '2025-09-19 07:30:00', 'morning', FALSE), -- Viernes (Mañana)
+(1, '2025-09-19 18:00:00', 'evening', FALSE), -- Viernes (Tarde)
+(1, '2025-09-20 17:05:00', 'evening', FALSE), -- Sábado
+-- Semana 2
+(1, '2025-09-22 07:30:00', 'morning', FALSE), -- Lunes
+(1, '2025-09-23 07:32:00', 'morning', FALSE), -- Martes
+(1, '2025-09-24 07:28:00', 'morning', FALSE), -- Miércoles
+(1, '2025-09-25 07:35:00', 'morning', TRUE),  -- Jueves (Overtime)
+(1, '2025-09-26 07:30:00', 'morning', FALSE), -- Viernes (Mañana)
+(1, '2025-09-26 18:00:00', 'evening', FALSE), -- Viernes (Tarde

@@ -5,8 +5,8 @@ const router = express.Router();
 
 const getCurrentShift = (date) => {
   const day = date.getDay();
-  const hour = 7;
-  const minutes = 30;
+  const hour = date.getHours();
+  const minutes = date.getMinutes();
   const time = hour + minutes / 60;
   if (day >= 1 && day <= 4) {
     if (time >= 7 && time < 10) return { type: 'morning', start: 7, end: 10 };

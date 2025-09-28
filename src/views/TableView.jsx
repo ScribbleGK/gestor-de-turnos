@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BackIcon } from '../icons';
 import { getFortnightStartDate } from '../utils/date';
+import apiUrl from '../apiConfig';
 
 function TableView({ onBack }) {
   const [timesheetData, setTimesheetData] = useState(null);
@@ -10,7 +11,7 @@ function TableView({ onBack }) {
     const fetchTimesheet = async () => {
       const startDate = getFortnightStartDate();
       try {
-        const response = await fetch(`http://localhost:3001/api/employees/timesheet?startDate=${startDate}`);
+        const response = await fetch(`${apiUrl}/employees/timesheet?startDate=${startDate}`);
         if (!response.ok) {
           throw new Error('Error al obtener los datos del timesheet');
         }

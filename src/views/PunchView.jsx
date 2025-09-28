@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth'; 
 import { BackIcon, ClockIcon, CheckCircleIcon, BlockedIcon } from '../icons';
+import apiUrl from '../apiConfig';
 
 // CAMBIO: La configuración ahora tiene una propiedad separada para la clase de animación.
 const buttonConfig = {
@@ -29,7 +30,7 @@ function PunchView({ onBack }) {
     const fetchStatus = async () => {
       const employeeId = currentUser.id;
       try {
-        const response = await fetch(`http://localhost:3001/api/attendances/status?employeeId=${employeeId}`);
+        const response = await fetch(`${apiUrl}/attendances/status?employeeId=${employeeId}`);
         if (!response.ok) throw new Error('Error de red');
         const data = await response.json();
         
@@ -52,7 +53,7 @@ function PunchView({ onBack }) {
     const employeeId = currentUser.id;
     setButtonStatus('loading');
     try {
-      const response = await fetch('http://localhost:3001/api/attendances/punch', {
+      const response = await fetch(`${apiUrl}/attendances/punch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId }),

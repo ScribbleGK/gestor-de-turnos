@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import PinPad from '../components/PinPad';
+import apiUrl from '../apiConfig';
 
 const SelectNameView = ({ employees, onSelect, onNext }) => (
   <form onSubmit={onNext} className="space-y-6">
@@ -50,7 +51,7 @@ function LoginView() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/auth/active-employees');
+        const response = await fetch(`${apiUrl}/auth/active-employees`);
         if (!response.ok) throw new Error('Error de red');
         const data = await response.json();
         setEmployees(data);
@@ -85,7 +86,7 @@ function LoginView() {
         return;
     }
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId: selectedEmployee.id, pin }),
@@ -108,7 +109,7 @@ function LoginView() {
       return;
     }
     try {
-      await fetch('http://localhost:3001/api/auth/set-pin', {
+      await fetch(`${apiUrl}/auth/set-pin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId: selectedEmployee.id, pin }),

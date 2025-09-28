@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { BackIcon, DownloadIcon } from '../icons';
 import { getFortnightOptions } from '../utils/date'; // <--- CAMBIO: Usamos esta función ahora
+import apiUrl from '../apiConfig';
 
 function InvoicesView({ onBack }) {
   const { currentUser } = useAuth();
@@ -34,7 +35,7 @@ function InvoicesView({ onBack }) {
     const fetchInvoiceData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`http://localhost:3001/api/invoices/preview?employeeId=${currentUser.id}&startDate=${selectedFortnight}`);
+        const response = await fetch(`${apiUrl}/invoices/preview?employeeId=${currentUser.id}&startDate=${selectedFortnight}`);
         if (!response.ok) throw new Error('Error al obtener la factura');
         const data = await response.json();
         setInvoiceData(data);
@@ -58,7 +59,7 @@ function InvoicesView({ onBack }) {
     const employeeId = currentUser.id;
     setIsDownloading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/invoices/generate', {
+      const response = await fetch(`${apiUrl}/invoices/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId, startDate: selectedFortnight, invoiceNumber }), // <--- CAMBIO: Usa la quincena seleccionada

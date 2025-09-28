@@ -7,7 +7,7 @@ import authRoutes from './routes/auth.js';
 
 //Iniciando servidor
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 //Peticiones
 app.use(cors());

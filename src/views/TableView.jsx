@@ -45,7 +45,7 @@ function TableView({ onBack }) {
       date.setUTCDate(date.getUTCDate() + offset);
       const isLastDayOfWeek = (i + 1) % 6 === 0;
       headers.push(
-        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
+        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
           <span className="text-xs font-medium text-gray-500">{days[i % 6]}</span>
           <span className="block text-sm font-semibold text-gray-800">{date.getUTCDate()}</span>
         </th>
@@ -69,9 +69,9 @@ function TableView({ onBack }) {
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-200 border-b-2 border-gray-300">
+            <thead className="bg-gray-200 border-b-2 border-gray-300 ">
               <tr>
-                <th className="p-2 text-left font-semibold text-gray-700 sticky left-0 bg-gray-200 z-10 w-40">Empleado</th>
+                <th className="p-2 text-left font-semibold text-gray-700 sticky left-0 bg-gray-200 z-10 w-40 ">Empleado</th>
                 {renderDayHeaders()}
                 <th className="p-2 border-l border-gray-300 font-semibold text-gray-700 w-24">Total</th>
               </tr>
@@ -83,7 +83,7 @@ function TableView({ onBack }) {
                   {employee.hours.map((hour, index) => {
                     const isLastDayOfWeek = (index + 1) % 6 === 0;
                     return (
-                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-indigo-300' : ''}`}>
+                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
                         {hour !== null ? hour.toFixed(1) : <span className="text-gray-400">-</span>}
                       </td>
                     )

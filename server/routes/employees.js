@@ -3,6 +3,7 @@ import pool from '../db.js';
 
 const router = express.Router();
 
+// Esta ruta no se modifica, la dejamos como referencia.
 router.get('/', async (req, res) => {
     try {
       const [rows] = await pool.query('SELECT * FROM employees ORDER BY surname, name');
@@ -19,38 +20,36 @@ router.get('/timesheet', async (req, res) => {
     return res.status(400).json({ error: 'Se requiere una fecha de inicio (startDate).' });
   }
   try {
-    // CORRECCIÓN: Volvemos a LEFT JOIN para incluir a todos los empleados activos.
-    // Y usamos un separador seguro ('|') en GROUP_CONCAT.
+    // CAMBIO CLAVE: Usamos INNER JOIN para obtener solo empleados con asistencias en el período.
     const query = `
       SELECT 
         e.id, 
         e.name, 
         e.surname,
-        GROUP_CONCAT(CONCAT_WS('|', a.punch_time, a.is_overtime)) as punches
+        GROUP_CONCAT(CONCAT_WS('|', a.punch_time, a.is_overtime) ORDER BY a.punch_time) as punches
       FROM employees e
-      LEFT JOIN attendances a 
+      INNER JOIN attendances a 
         ON e.id = a.employee_id
         AND a.punch_time >= ? 
         AND a.punch_time < DATE_ADD(?, INTERVAL 14 DAY)
       WHERE 
         e.active = TRUE
-      GROUP BY e.id
+      GROUP BY e.id, e.name, e.surname
       ORDER BY e.surname, e.name;
     `;
     const [rows] = await pool.query(query, [startDate, startDate]);
 
+    // El resto de tu lógica de procesamiento de datos permanece intacta.
     const employeesData = rows.map(row => {
         const employee = {
-            name: `${row.name} ${row.surname}`.trim(),
+            name: `${row.surname}, ${row.name}`.trim(), // Ajustado para formato Apellido, Nombre
             hours: Array(12).fill(null),
             total: 0
         };
 
-        // CORRECCIÓN: Manejamos el caso en que un empleado no tiene asistencias (punches será null).
         if (row.punches) {
             const punches = row.punches.split(',');
             punches.forEach(punch => {
-                // CORRECCIÓN: Usamos el separador seguro '|'.
                 const [punchTimeString, isOvertimeString] = punch.split('|');
                 const punchDate = new Date(punchTimeString);
                 const isOvertime = isOvertimeString === '1';

@@ -13,11 +13,13 @@ const SelectNameView = ({ employees, onSelect, onNext }) => (
       className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
     >
       <option value="" disabled>Selecciona tu nombre...</option>
-      {employees.map(employee => (
-        <option key={employee.id} value={employee.id}>
-          {employee.surname}, {employee.name}
-        </option>
-      ))}
+      {employees.map(employee =>
+        employee.active = 1 ? (
+          <option key={employee.id} value={employee.id}>
+            {employee.surname}, {employee.name}
+          </option>
+        ) : null
+      )}
     </select>
     <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors text-lg">
       Siguiente

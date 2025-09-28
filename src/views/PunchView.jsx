@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth'; 
 import { BackIcon, ClockIcon, CheckCircleIcon, BlockedIcon } from '../icons';
 
 // CAMBIO: La configuración ahora tiene una propiedad separada para la clase de animación.
@@ -19,12 +20,14 @@ const formatPunchTime = (isoString) => {
 };
 
 function PunchView({ onBack }) {
+  const { currentUser } = useAuth(); 
+
   const [buttonStatus, setButtonStatus] = useState('loading');
   const [punchMessage, setPunchMessage] = useState("Verificando estado...");
 
   useEffect(() => {
     const fetchStatus = async () => {
-      const employeeId = 1;
+      const employeeId = currentUser.id;
       try {
         const response = await fetch(`http://localhost:3001/api/attendances/status?employeeId=${employeeId}`);
         if (!response.ok) throw new Error('Error de red');
@@ -46,7 +49,7 @@ function PunchView({ onBack }) {
   }, []);
 
   const handlePunch = async () => {
-    const employeeId = 1;
+    const employeeId = currentUser.id;
     setButtonStatus('loading');
     try {
       const response = await fetch('http://localhost:3001/api/attendances/punch', {

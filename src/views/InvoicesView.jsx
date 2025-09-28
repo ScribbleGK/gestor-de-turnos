@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth'; 
 import { BackIcon, DownloadIcon } from '../icons';
 import { getFortnightStartDate } from '../utils/date';
 
 function InvoicesView({ onBack }) {
+  const { currentUser } = useAuth(); 
+
   const [invoiceData, setInvoiceData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -12,7 +15,7 @@ function InvoicesView({ onBack }) {
   useEffect(() => {
     const fetchInvoiceData = async () => {
       const startDate = getFortnightStartDate();
-      const employeeId = 1;
+      const employeeId = currentUser.id;
       setIsLoading(true);
       try {
         const response = await fetch(`http://localhost:3001/api/invoices/preview?employeeId=${employeeId}&startDate=${startDate}`);
@@ -36,7 +39,7 @@ function InvoicesView({ onBack }) {
         return;
     }
     const startDate = getFortnightStartDate();
-    const employeeId = 1;
+    const employeeId = currentUser.id;
     setIsDownloading(true);
     try {
       const response = await fetch('http://localhost:3001/api/invoices/generate', {

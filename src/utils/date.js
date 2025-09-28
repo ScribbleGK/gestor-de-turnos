@@ -1,75 +1,81 @@
-// Helper to format a date object to 'YYYY-MM-DD' string for the API
-const toYYYYMMDD = (date) => {
-  // We need to adjust for timezone offsets when formatting
-  const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
-  const localDate = new Date(date.getTime() - tzOffset);
-  return localDate.toISOString().split('T')[0];
-};
-
-// Helper to format a date for display labels (e.g., "15 sep. 2025")
-const formatDisplayDate = (date) => {
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC' // Use UTC to avoid off-by-one day errors in labels
-  });
-};
-
-// The start of a known pay period. All other periods are calculated from this.
-const ANCHOR_DATE = new Date('2025-09-15T00:00:00Z');
-const PERIOD_IN_MS = 14 * 24 * 60 * 60 * 1000; // 14 days in milliseconds
+// Usamos una fecha ancla en la zona horaria local.
+const ANCHOR_DATE = new Date('2025-09-15T00:00:00'); 
+const PERIOD_DAYS = 14;
 
 /**
- * Calculates the start date of the 14-day pay period for any given date.
- * @param {Date} date The date to find the period for.
- * @returns {Date} The exact start date of the pay period.
+ * Calcula la fecha de inicio de la quincena de 14 días para cualquier fecha dada,
+ * basándose en la zona horaria local del navegador.
+ * @param {Date} targetDate - La fecha para la cual calcular el inicio de la quincena.
+ * @returns {Date} La fecha de inicio de la quincena.
  */
-const getFortnightStartDateForDate = (date) => {
-    // Work with UTC to avoid timezone shifting issues
-    const targetDateUTC = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-    const anchorDateUTC = ANCHOR_DATE.getTime();
+const getFortnightStartDateForDate = (targetDate) => {
+  // Reseteamos la hora para trabajar solo con días y evitar problemas con el horario de verano.
+  const targetDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const anchorDay = new Date(ANCHOR_DATE.getFullYear(), ANCHOR_DATE.getMonth(), ANCHOR_DATE.getDate());
 
-    const timeDiff = targetDateUTC - anchorDateUTC;
-    const periodsPassed = Math.floor(timeDiff / PERIOD_IN_MS);
-    const currentPeriodStartMillis = anchorDateUTC + (periodsPassed * PERIOD_IN_MS);
-    
-    return new Date(currentPeriodStartMillis);
+  const diffTime = targetDay - anchorDay;
+  // Calculamos la diferencia en días.
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    // Maneja fechas anteriores a la fecha ancla (no debería pasar en nuestro caso, pero es robusto)
+    const periodsToGoBack = Math.ceil(Math.abs(diffDays) / PERIOD_DAYS) || 1;
+    const startDate = new Date(anchorDay);
+    startDate.setDate(startDate.getDate() - periodsToGoBack * PERIOD_DAYS);
+    return startDate;
+  }
+
+  // Calculamos cuántos períodos completos de 14 días han pasado.
+  const periodsPassed = Math.floor(diffDays / PERIOD_DAYS);
+  
+  // La fecha de inicio es la fecha ancla más los días de los períodos que han pasado.
+  const startDate = new Date(anchorDay);
+  startDate.setDate(startDate.getDate() + periodsPassed * PERIOD_DAYS);
+
+  return startDate;
 };
 
 
 /**
- * Generates a list of the last 12 pay periods for a dropdown menu.
+ * Genera una lista de las últimas 12 quincenas para el menú desplegable.
+ * @returns {Array<{value: string, label: string}>} Un array de objetos para el <select>.
  */
 export const getFortnightOptions = () => {
-    const options = [];
-    const today = new Date();
+  const options = [];
+  let currentStartDate = getFortnightStartDateForDate(new Date());
+
+  for (let i = 0; i < 12; i++) {
+    const endDate = new Date(currentStartDate);
+    endDate.setDate(endDate.getDate() + 13);
+
+    const yyyy = currentStartDate.getFullYear();
+    const mm = String(currentStartDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(currentStartDate.getDate()).padStart(2, '0');
+    const value = `${yyyy}-${mm}-${dd}`;
+
+    const label = `${currentStartDate.toLocaleDateString('es-ES')} - ${endDate.toLocaleDateString('es-ES')}`;
     
-    let currentPeriodStartDate = getFortnightStartDateForDate(today);
+    options.push({ value, label });
 
-    for (let i = 0; i < 12; i++) {
-        const startDate = new Date(currentPeriodStartDate);
-        
-        // The end date is always 13 days after the start date (for a total of 14 days)
-        const endDate = new Date(startDate.getTime() + (13 * 24 * 60 * 60 * 1000));
+    // Retrocedemos 14 días para encontrar el inicio de la quincena anterior.
+    currentStartDate.setDate(currentStartDate.getDate() - PERIOD_DAYS);
+  }
 
-        const value = toYYYYMMDD(startDate);
-        const label = `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
-        options.push({ value, label });
-
-        // Move to the start date of the previous period by subtracting 14 days
-        currentPeriodStartDate.setTime(currentPeriodStartDate.getTime() - PERIOD_IN_MS);
-    }
-
-    return options;
+  return options;
 };
 
 /**
- * Returns the start date of the current fortnight as a 'YYYY-MM-DD' string.
- * This is used by TableView to always show the current data.
+ * **NUEVA FUNCIÓN CORREGIDA**
+ * Obtiene la fecha de inicio de la quincena actual en formato YYYY-MM-DD.
+ * Esta función es necesaria para componentes como TableView.
+ * @returns {string} La fecha de inicio de la quincena actual.
  */
 export const getFortnightStartDate = () => {
-  const today = new Date();
-  const startDate = getFortnightStartDateForDate(today);
-  return toYYYYMMDD(startDate);
+  const startDate = getFortnightStartDateForDate(new Date());
+  
+  const yyyy = startDate.getFullYear();
+  const mm = String(startDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(startDate.getDate()).padStart(2, '0');
+  
+  return `${yyyy}-${mm}-${dd}`;
 };

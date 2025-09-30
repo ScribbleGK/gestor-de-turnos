@@ -1,6 +1,6 @@
 import express from 'express';
 import pool from '../db.js';
-import { toZonedTime } from 'date-fns-tz'
+import { toZonedTime } from 'date-fns-tz';
 
 const router = express.Router();
 

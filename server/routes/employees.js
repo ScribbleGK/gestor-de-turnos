@@ -1,11 +1,6 @@
 import express from 'express';
 import pool from '../db.js';
-import { toZonedTime } from 'date-fns-tz'
-
-// Usamos el mismo método de importación para consistencia.
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { toZonedTime } = require('date-fns-tz');
+import { toZonedTime } from 'date-fns-tz';
 
 const router = express.Router();
 const TIME_ZONE = 'Australia/Brisbane';

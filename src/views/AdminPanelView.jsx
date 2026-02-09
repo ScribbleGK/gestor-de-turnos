@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import Card from '../components/Card';
-import { BackIcon, ScheduleIcon, InvoiceIcon, SettingsIcon, LogIcon } from '../icons'; // Asegúrate de tener estos iconos
+import { BackIcon, ScheduleIcon, InvoiceIcon, SettingsIcon, LogIcon, UsersIcon } from '../icons'; // Asegúrate de tener estos iconos
 import TableEditorView from './admin/TableEditorView';
+import EmployeesManagerView from './admin/EmployeesManagerView';
 
 function AdminPanelView({ onBack }) {
     const [subView, setSubView] = useState('menu');
@@ -13,6 +14,12 @@ function AdminPanelView({ onBack }) {
             title: 'Editor de Tabla', 
             icon: <ScheduleIcon />, 
             description: 'Asignar horas y turnos manualmente' 
+        },
+        { 
+            id: 'gestor_empleados',
+            title: 'Gestor de Empleados', 
+            icon: <UsersIcon />, 
+            description: 'Añadir, editar o desactivar personal' 
         },
         { 
             id: 'ver_facturas', 
@@ -38,6 +45,8 @@ function AdminPanelView({ onBack }) {
         switch(subView) {
             case 'editor_tabla': 
                 return <TableEditorView onBack={() => setSubView('menu')} />;
+            case 'gestor_empleados': 
+                return <EmployeesManagerView onBack={() => setSubView('menu')} />;
             case 'ver_facturas': 
                 return <div className="p-4 bg-white rounded shadow">Próximamente: Visor Global de Facturas</div>;
             case 'config_factura': 
@@ -66,7 +75,7 @@ function AdminPanelView({ onBack }) {
     };
 
     return (
-        <div className="w-full max-w-5xl mx-auto">
+        <div className="w-full max-w-[95%] mx-auto">
             <header className="flex items-center mb-8">
                 <button 
                     onClick={() => subView === 'menu' ? onBack() : setSubView('menu')} 

@@ -260,7 +260,7 @@ function TableEditorView({ onBack }) {
         }
     };
 
-    // 7. DESCARGAR PDF (Actualizado a 2 decimales y formato inglés)
+    // 7. DESCARGAR PDF (Filtrando empleados con 0 horas)
     const downloadPDF = () => {
         if (!selectedPeriod || employees.length === 0) {
             alert("No hay datos para generar el PDF.");
@@ -278,26 +278,44 @@ function TableEditorView({ onBack }) {
 
         const tableHead = [['Employee', ...days.map(d => format(d, 'dd/MM (EEE)')), 'Total']];
         
-        const tableBody = employees.map(emp => {
+        // --- LÓGICA DE FILTRADO ---
+        const tableBody = employees.reduce((acc, emp) => {
             let totalRow = 0;
-            const rowData = [
-                formatNameDesktop(emp.name, emp.surname), // PDF usa formato nombre completo
-                ...days.map(d => {
-                    const key = `${emp.id}_${format(d, 'yyyy-MM-dd')}`;
-                    const val = gridData[key]?.duration || 0;
-                    totalRow += val;
-                    // FIX: 2 Decimales en el PDF
-                    return val > 0 ? val.toFixed(2) : ''; 
-                }),
-                totalRow.toFixed(2) // FIX: 2 Decimales en el Total
-            ];
-            return rowData;
-        });
+            
+            // Calculamos las horas de este empleado
+            const rowCells = days.map(d => {
+                const key = `${emp.id}_${format(d, 'yyyy-MM-dd')}`;
+                const val = gridData[key]?.duration || 0;
+                totalRow += val;
+                return val > 0 ? val.toFixed(2) : ''; 
+            });
 
+            // CONDICIÓN CLAVE: Solo agregamos al PDF si tiene horas
+            if (totalRow > 0) {
+                const rowData = [
+                    formatNameDesktop(emp.name, emp.surname), // Nombre
+                    ...rowCells,                              // Días
+                    totalRow.toFixed(2)                       // Total Fila
+                ];
+                acc.push(rowData);
+            }
+            
+            return acc;
+        }, []); // Empezamos con array vacío
+
+        // Si después de filtrar no queda nadie, avisamos
+        if (tableBody.length === 0) {
+            alert("Ningún empleado tiene horas registradas en este periodo.");
+            return;
+        }
+
+        // Fila de Totales (Esta se queda igual, sumando todo lo visible)
+        // Nota: Técnicamente suma TODO el gridData, si quieres que sume solo lo visible sería más complejo, 
+        // pero usualmente el total global debe reflejar la realidad contable.
         const totalRowData = [
             'DAILY TOTAL', 
-            ...dailyTotals.map(t => t > 0 ? t.toFixed(2) : ''), // FIX: 2 Decimales
-            grandTotalPeriod.toFixed(2) // FIX: 2 Decimales
+            ...dailyTotals.map(t => t > 0 ? t.toFixed(2) : ''), 
+            grandTotalPeriod.toFixed(2)
         ];
         tableBody.push(totalRowData);
 
@@ -310,6 +328,7 @@ function TableEditorView({ onBack }) {
             styles: { fontSize: 8, cellPadding: 2, halign: 'center' },
             columnStyles: { 0: { cellWidth: 35, halign: 'left', fontStyle: 'bold' } },
             didParseCell: function (data) {
+                // Negrita para la fila de totales (la última)
                 if (data.row.index === tableBody.length - 1) {
                     data.cell.styles.fontStyle = 'bold';
                     data.cell.styles.fillColor = [240, 240, 240];

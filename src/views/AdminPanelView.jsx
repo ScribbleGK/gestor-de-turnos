@@ -3,6 +3,7 @@ import Card from '../components/Card';
 import { BackIcon, ScheduleIcon, InvoiceIcon, SettingsIcon, LogIcon, UsersIcon } from '../icons'; // Asegúrate de tener estos iconos
 import TableEditorView from './admin/TableEditorView';
 import EmployeesManagerView from './admin/EmployeesManagerView';
+import GlobalInvoicesView from './admin/GlobalInvoicesView';
 
 function AdminPanelView({ onBack }) {
     const [subView, setSubView] = useState('menu');
@@ -48,7 +49,7 @@ function AdminPanelView({ onBack }) {
             case 'gestor_empleados': 
                 return <EmployeesManagerView onBack={() => setSubView('menu')} />;
             case 'ver_facturas': 
-                return <div className="p-4 bg-white rounded shadow">Próximamente: Visor Global de Facturas</div>;
+                return <GlobalInvoicesView onBack={() => setSubView('menu')} />;
             case 'config_factura': 
                 return <div className="p-4 bg-white rounded shadow">Próximamente: Formulario de Configuración</div>;
             case 'logs_sistema': 

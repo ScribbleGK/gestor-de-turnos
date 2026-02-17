@@ -2,155 +2,180 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calibrador Visual de PDF</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Importamos la librería PDF.js de Mozilla -->
-    <script src="https://mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
+    <title>Calibrador PDF - ZARA</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
-        body { font-family: sans-serif; cursor: none; }
-        canvas { border: 1px solid #ccc; cursor: crosshair; }
-        #tooltip {
-            position: absolute;
-            display: none;
-            background-color: rgba(0, 0, 0, 0.75);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 14px;
-            font-family: monospace;
-            pointer-events: none; /* Evita que el tooltip interfiera con el ratón */
-            white-space: nowrap;
-            z-index: 10;
-        }
+        body { margin: 0; font-family: system-ui; display: flex; height: 100vh; overflow: hidden; background: #f0f0f0; }
+        #panel { width: 350px; background: white; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); overflow-y: auto; z-index: 10; }
+        #preview-container { flex: 1; height: 100%; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        iframe { width: 100%; height: 100%; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2); background: white; }
+        h3 { margin-top: 0; color: #4f46e5; }
+        .control-group { margin-bottom: 15px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; }
+        label { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #374151; }
+        input[type="range"] { width: 100%; }
+        select { width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #ccc; }
+        .code-box { background: #1f2937; color: #10b981; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; white-space: pre-wrap; margin-top: 20px; }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+<body>
 
-    <div class="w-full max-w-4xl bg-white p-6 rounded-lg shadow-md text-center">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">Calibrador Visual de PDF</h1>
-        <p class="text-gray-600 mb-4">Sube tu plantilla PDF para encontrar las coordenadas (x, y) para tu código. Haz clic para dejar un marcador temporal.</p>
-
-        <input type="file" id="pdf-upload" class="mb-4 block w-full text-sm text-gray-500
-            file:mr-4 file:py-2 file:px-4
-            file:rounded-full file:border-0
-            file:text-sm file:font-semibold
-            file:bg-indigo-50 file:text-indigo-700
-            hover:file:bg-indigo-100"
-        />
-
-        <div id="coords-display" class="my-4 p-3 bg-indigo-100 border-l-4 border-indigo-500 text-indigo-800 font-mono text-lg rounded-md h-12 flex items-center justify-center">
-            Sube un PDF para empezar...
+    <div id="panel">
+        <h3>Calibrador Visual</h3>
+        
+        <div class="control-group">
+            <label>Margen Global de la Hoja <span id="val-margin">12</span></label>
+            <input type="range" id="margin" min="0" max="30" value="12" oninput="updatePDF()">
         </div>
 
-        <div class="bg-gray-200 p-2 inline-block">
-            <canvas id="pdf-canvas"></canvas>
+        <div class="control-group">
+            <label>Columna Izq: Etiqueta (X) <span id="val-leftColLabelX">15</span></label>
+            <input type="range" id="leftColLabelX" min="0" max="100" value="15" oninput="updatePDF()">
+            
+            <label>Columna Izq: Valor (X) <span id="val-leftColValueX">45</span></label>
+            <input type="range" id="leftColValueX" min="0" max="100" value="45" oninput="updatePDF()">
+        </div>
+
+        <div class="control-group">
+            <label>Columna Der: Etiqueta (X) <span id="val-rightColLabelX">115</span></label>
+            <input type="range" id="rightColLabelX" min="50" max="200" value="115" oninput="updatePDF()">
+            
+            <label>Columna Der: Valor (X) <span id="val-rightColValueX">150</span></label>
+            <input type="range" id="rightColValueX" min="50" max="200" value="150" oninput="updatePDF()">
+        </div>
+
+        <div class="control-group">
+            <label>Estilo de Tablas</label>
+            <select id="tableTheme" onchange="updatePDF()">
+                <option value="plain">Sin Bordes Internos (Plain)</option>
+                <option value="grid">Bordes de Excel (Grid)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Grosor del Borde Interno <span id="val-lineWidth">0</span></label>
+            <input type="range" id="lineWidth" min="0" max="2" step="0.1" value="0" oninput="updatePDF()">
+        </div>
+
+        <div class="code-box">
+            <b>Copia estos valores a tu React:</b><br><br>
+            <span id="output-code"></span>
         </div>
     </div>
 
-    <!-- El tooltip que seguirá al ratón -->
-    <div id="tooltip"></div>
+    <div id="preview-container">
+        <iframe id="pdf-preview"></iframe>
+    </div>
 
-    <script type="module">
-        // Importamos pdfjsLib del script que cargamos en el head
-        const { pdfjsLib } = globalThis;
-        // Le indicamos dónde encontrar los archivos "worker" que necesita
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://mozilla.github.io/pdf.js/build/pdf.worker.mjs`;
+    <script>
+        const { jsPDF } = window.jspdf;
 
-        const fileInput = document.getElementById('pdf-upload');
-        const canvas = document.getElementById('pdf-canvas');
-        const ctx = canvas.getContext('2d');
-        const coordsDisplay = document.getElementById('coords-display');
-        const tooltip = document.getElementById('tooltip');
+        function updatePDF() {
+            // 1. Obtener valores de los sliders
+            const margin = parseInt(document.getElementById('margin').value);
+            const leftColLabelX = parseInt(document.getElementById('leftColLabelX').value);
+            const leftColValueX = parseInt(document.getElementById('leftColValueX').value);
+            const rightColLabelX = parseInt(document.getElementById('rightColLabelX').value);
+            const rightColValueX = parseInt(document.getElementById('rightColValueX').value);
+            const tableTheme = document.getElementById('tableTheme').value;
+            const lineWidth = parseFloat(document.getElementById('lineWidth').value);
 
-        let currentPdfPage = null;
-        let clickedPoints = [];
+            // Actualizar textos visuales
+            document.getElementById('val-margin').innerText = margin;
+            document.getElementById('val-leftColLabelX').innerText = leftColLabelX;
+            document.getElementById('val-leftColValueX').innerText = leftColValueX;
+            document.getElementById('val-rightColLabelX').innerText = rightColLabelX;
+            document.getElementById('val-rightColValueX').innerText = rightColValueX;
+            document.getElementById('val-lineWidth').innerText = lineWidth;
 
-        // Función para redibujar todo: el PDF y los puntos
-        const redrawCanvas = async () => {
-            if (!currentPdfPage) return;
+            // Actualizar código para copiar
+            document.getElementById('output-code').innerText = 
+`const margin = ${margin};
+const leftColLabelX = ${leftColLabelX};
+const leftColValueX = ${leftColValueX};
+const rightColLabelX = ${rightColLabelX};
+const rightColValueX = ${rightColValueX};
 
-            const viewport = currentPdfPage.getViewport({ scale: 1.5 });
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
+// En tu autoTable:
+theme: '${tableTheme}',
+headStyles: { ..., lineWidth: ${lineWidth} },
+bodyStyles: { ..., lineWidth: ${lineWidth} },`;
 
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
+            // 2. Generar el PDF
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            
+            // Marco exterior
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.5);
+            doc.rect(margin, margin, pageWidth - (margin * 2), pageHeight - (margin * 2));
+
+            let startY = 25;
+
+            // Título
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text("INVOICE", pageWidth / 2, startY, { align: "center" });
+            startY += 15;
+
+            // Columnas
+            doc.setFontSize(9);
+            const drawRow = (l1, v1, l2, v2, y) => {
+                if(l1) { doc.setFont("helvetica", "bold"); doc.text(l1, leftColLabelX, y); doc.setFont("helvetica", "normal"); doc.text(v1, leftColValueX, y); }
+                if(l2) { doc.setFont("helvetica", "bold"); doc.text(l2, rightColLabelX, y); doc.setFont("helvetica", "normal"); doc.text(v2, rightColValueX, y); }
             };
-            await currentPdfPage.render(renderContext).promise;
 
-            // Dibujamos los puntos guardados y sus coordenadas
-            clickedPoints.forEach(point => {
-                const canvasX = point.x * 1.5;
-                const canvasY = canvas.height - (point.y * 1.5);
-                
-                // Dibuja el círculo rojo
-                ctx.beginPath();
-                ctx.arc(canvasX, canvasY, 5, 0, 2 * Math.PI, false);
-                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-                ctx.fill();
+            // Dummy Data
+            drawRow("Name", "Alejandra Ruiz", "Invoice Number", "45", startY); startY += 6;
+            drawRow("Address", "2/2 Berwick St, Fortitude Valley", "Date", "02/02/2026", startY); startY += 6;
+            drawRow("Telephone", "478935675", "Due Date:", "06/02/2026", startY); startY += 6;
+            drawRow("ABN Number", "82640342626", "Description", "Cleaning Zara 155 Queen St", startY); startY += 6;
+            drawRow("Email", "aleruizcontact@gmail.com", "", "", startY); startY += 10;
+            drawRow("Company Email", "doug.s@unitedtraders.com.au", "", "", startY); startY += 6;
+            drawRow("Company ABN:", "26 601 411 474", "", "", startY); startY += 6;
+            drawRow("Business Telephone", "0414 270 761", "", "", startY); startY += 10;
 
-                // Dibuja el texto de las coordenadas al lado del punto
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                ctx.font = 'bold 12px sans-serif';
-                const text = `(x:${point.x.toFixed(0)}, y:${point.y.toFixed(0)})`;
-                ctx.fillText(text, canvasX + 10, canvasY + 5);
+            const blueZara = [79, 129, 189];
+
+            // Tabla 1
+            doc.autoTable({
+                startY: startY,
+                margin: { left: margin, right: margin },
+                head: [['Description', 'Pay Period', 'Grand Total']],
+                body: [['Cleaning Services Zara', '19/01/2026 - 01/02/2026', '$799.50']],
+                theme: tableTheme,
+                headStyles: { fillColor: blueZara, textColor: 0, fontStyle: 'bold', halign: 'center', lineColor: 0, lineWidth: lineWidth },
+                bodyStyles: { textColor: 0, halign: 'center', lineColor: 0, lineWidth: lineWidth },
             });
-        };
 
-        fileInput.addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (!file || file.type !== 'application/pdf') {
-                coordsDisplay.textContent = "Por favor, sube un archivo PDF.";
-                return;
-            }
+            startY = doc.lastAutoTable.finalY + 10;
+            doc.setFont("helvetica", "bold"); doc.text("Preferred Payment Methods", margin + 2, startY); startY += 6;
+            doc.setFont("helvetica", "normal"); doc.text("EFT [Electronic Funds Transfer]", margin + 2, startY); startY += 10;
             
-            clickedPoints = [];
-            coordsDisplay.textContent = "Cargando PDF...";
-            
-            const fileReader = new FileReader();
-            fileReader.onload = async function() {
-                const typedarray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-                currentPdfPage = await pdf.getPage(1);
-                await redrawCanvas();
-                coordsDisplay.textContent = "¡Listo! Mueve el ratón y haz clic.";
-            };
-            fileReader.readAsArrayBuffer(file);
-        });
+            // Tabla 2 (Banco)
+            doc.autoTable({
+                startY: startY,
+                margin: { left: margin, right: margin },
+                head: [[{ content: 'Direct Bank Transfer Details', colSpan: 4 }]],
+                body: [
+                    ['Bank Name', 'CommBank of Australia', 'Account Name', 'Alejandra Ruiz'],
+                    ['Account Type', 'Savings', 'BSB', '064-000'],
+                    ['', '', 'Account Number', '16445920']
+                ],
+                theme: tableTheme,
+                headStyles: { fillColor: blueZara, textColor: 0, fontStyle: 'bold', halign: 'left', lineColor: 0, lineWidth: lineWidth },
+                bodyStyles: { textColor: 0, halign: 'left', lineColor: 0, lineWidth: lineWidth },
+                columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 }, 2: { fontStyle: 'bold', cellWidth: 35 } }
+            });
 
-        const getCoordsFromEvent = (event) => {
-            const rect = canvas.getBoundingClientRect();
-            const scale = canvas.width / rect.width;
-            const canvasX = (event.clientX - rect.left) * scale;
-            const canvasY = (event.clientY - rect.top) * scale;
-            const pdfLibX = canvasX / 1.5;
-            const pdfLibY = (canvas.height - canvasY) / 1.5;
-            return { x: pdfLibX, y: pdfLibY };
-        };
+            // Mostrar en iframe
+            const blobUrl = doc.output('bloburl');
+            document.getElementById('pdf-preview').src = blobUrl;
+        }
 
-        canvas.addEventListener('mousemove', (event) => {
-            if (!currentPdfPage) return;
-            const coords = getCoordsFromEvent(event);
-            coordsDisplay.innerHTML = `<strong>x:</strong> ${coords.x.toFixed(2)} &nbsp;&nbsp;&nbsp; <strong>y:</strong> ${coords.y.toFixed(2)}`;
-            tooltip.style.display = 'block';
-            tooltip.style.left = `${event.pageX + 15}px`;
-            tooltip.style.top = `${event.pageY + 15}px`;
-            tooltip.innerHTML = `x:${coords.x.toFixed(0)}, y:${coords.y.toFixed(0)}`;
-        });
-
-        canvas.addEventListener('mouseout', () => {
-            tooltip.style.display = 'none';
-        });
-
-        canvas.addEventListener('click', (event) => {
-            if (!currentPdfPage) return;
-            const coords = getCoordsFromEvent(event);
-            clickedPoints.push(coords);
-            redrawCanvas(); // Redibujamos el canvas para mostrar el nuevo punto y su texto
-        });
+        // Ejecutar al cargar
+        window.onload = updatePDF;
     </script>
 </body>
 </html>
-

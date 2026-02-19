@@ -27,6 +27,7 @@ function InvoiceConfigView({ onBack }) {
     // 1. CARGAR DATOS AL INICIAR
     useEffect(() => {
         fetchConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchConfig = async () => {

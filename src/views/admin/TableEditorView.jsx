@@ -100,6 +100,7 @@ function TableEditorView({ onBack }) {
         if (selectedPeriod) {
             fetchData();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedPeriod]);
 
     const fetchData = async () => {

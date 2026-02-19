@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -13,7 +14,7 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error("Error al leer localStorage", error);
+      console.error("Error al leer localStorage", error); 
       localStorage.removeItem('currentUser');
     } finally {
       setLoading(false);

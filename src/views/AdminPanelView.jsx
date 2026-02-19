@@ -4,6 +4,8 @@ import { BackIcon, ScheduleIcon, InvoiceIcon, SettingsIcon, LogIcon, UsersIcon }
 import TableEditorView from './admin/TableEditorView';
 import EmployeesManagerView from './admin/EmployeesManagerView';
 import GlobalInvoicesView from './admin/GlobalInvoicesView';
+import InvoiceConfigView from './admin/InvoiceConfigView';
+import SystemLogsView from './admin/SystemLogsView';
 
 function AdminPanelView({ onBack }) {
     const [subView, setSubView] = useState('menu');
@@ -51,9 +53,9 @@ function AdminPanelView({ onBack }) {
             case 'ver_facturas': 
                 return <GlobalInvoicesView onBack={() => setSubView('menu')} />;
             case 'config_factura': 
-                return <div className="p-4 bg-white rounded shadow">Próximamente: Formulario de Configuración</div>;
+                return <InvoiceConfigView onBack={() => setSubView('menu')} />;
             case 'logs_sistema': 
-                return <div className="p-4 bg-white rounded shadow">Próximamente: Tabla de Logs</div>;
+                return <SystemLogsView onBack={() => setSubView('menu')} />;
             default:
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

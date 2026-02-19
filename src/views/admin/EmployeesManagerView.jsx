@@ -24,11 +24,11 @@ function EmployeesManagerView({ onBack }) {
         abn: '',
         bank_name: '',
         account_type: '',
-        account_name: '', // <--- AQUÍ ESTÁ EL CAMPO QUE FALTABA
+        account_name: '', 
         bsb: '',
         account_number: '',
         hourly_rate: '',
-        last_invoice: 0,  // <--- AQUÍ ESTÁ EL CAMPO DE FACTURA
+        last_invoice: 0,  
         role: 'worker',
         pin: '',
         active: true

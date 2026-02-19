@@ -257,6 +257,12 @@ function TableEditorView({ onBack }) {
                 if (error) throw error;
             }
 
+            await supabase.from('system_logs').insert({
+                action: 'UPDATE_TIMESHEET',
+                details: `Se ha actualizado la tabla de asistencias`,
+                admin_name: 'Admin'
+            });
+
             showFeedback('Guardado Exitoso', 'Los turnos se han guardado correctamente en la base de datos.', 'success');
             setShowModal(false);
             setIsEditing(false);

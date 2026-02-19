@@ -76,6 +76,7 @@ function GlobalInvoicesView({ onBack }) {
         if (selectedEmployee && selectedPeriod) {
             fetchInvoiceData();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEmployee, selectedPeriod]);
 
     const fetchInvoiceData = async () => {
@@ -137,7 +138,7 @@ function GlobalInvoicesView({ onBack }) {
     };
 
     // 3. GENERADOR DE PDF (DRAFT u OFICIAL)
-    const generatePDF = (isDraft = false) => {
+    const generatePDF = async (isDraft = false) => {
         const emp = employees.find(e => e.id.toString() === selectedEmployee);
         if (!emp || !config) return showFeedback("Atención", "Faltan datos del empleado o configuración.", "info");
         if (invoiceData.totalHours === 0) return showFeedback("Atención", "Este empleado no tiene horas en este periodo.", "info");
@@ -189,7 +190,7 @@ function GlobalInvoicesView({ onBack }) {
         drawInfoRow("Name", `${emp.name} ${emp.surname}`, "Invoice Number", finalInvoiceNum, startY); startY += 6;
         drawInfoRow("Address", emp.address || "N/A", "Date", todayStr, startY); startY += 6;
         drawInfoRow("Telephone", emp.telephone || "N/A", "Due Date:", dueDateStr, startY); startY += 6;
-        drawInfoRow("ABN Number", emp.abn || "N/A", "Description", `${config.description} 155 Queen St`, startY); startY += 6;
+        drawInfoRow("ABN Number", emp.abn || "N/A", "Description", `${config.description} ${config.company_address}`, startY); startY += 6;
         drawInfoRow("Email", emp.email || "N/A", null, null, startY); startY += 10;
         
         drawInfoRow("Company Email", config.company_email, null, null, startY); startY += 6;
@@ -202,7 +203,7 @@ function GlobalInvoicesView({ onBack }) {
             startY: startY,
             margin: { left: margin, right: margin },
             head: [['Description', 'Pay Period', 'Grand Total']],
-            body: [['Cleaning Services Zara', periodStr, `$${invoiceData.grandTotal.toFixed(2)}`]],
+            body: [[`${config.description}`, periodStr, `$${invoiceData.grandTotal.toFixed(2)}`]],
             theme: 'grid',
             headStyles: { fillColor: blueZara, textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.5 },
             bodyStyles: { textColor: [0, 0, 0], halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.5 },
@@ -242,6 +243,19 @@ function GlobalInvoicesView({ onBack }) {
 
         const fileNamePrefix = isDraft ? 'DRAFT_Invoice' : 'Invoice';
         doc.save(`${fileNamePrefix}_${emp.name}_${emp.surname}_${periodStr.replace(/\//g, '-')}.pdf`);
+
+        try {
+            await supabase.from('system_logs').insert({
+                action: 'DOWNLOAD_INVOICE',
+                details: isDraft 
+                    ? `Admin previsualizó borrador de: ${emp.name} ${emp.surname}. Periodo: ${periodStr}`
+                    : `Admin descargó Factura N° ${invoiceNum} de: ${emp.name} ${emp.surname}. Periodo: ${periodStr}`,
+                admin_name: 'Admin'
+            });
+        } catch (err) {
+            console.error("Error guardando el log de descarga:", err);
+            // No bloqueamos la app si falla el log, pero lo registramos en consola
+        }
         
         if (!isDraft) {
             showFeedback("Descarga Exitosa", "La factura ha sido descargada.", "success");

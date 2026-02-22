@@ -1,10 +1,89 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { getFortnightStart } from '../../utils/date';
 import { addDays, format, parseISO } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BackIcon, DownloadIcon } from '../../icons';
+
+// --- NUEVO: COMPONENTE BUSCADOR DE EMPLEADOS (Estilo Login) ---
+const SearchableEmployeeSelect = ({ employees, selectedEmployeeId, onSelect }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const wrapperRef = useRef(null);
+
+    const selectedEmp = employees.find(e => e.id.toString() === selectedEmployeeId);
+    // Si el menú está abierto muestra lo que escribes, si no, muestra el nombre seleccionado
+    const displayValue = isOpen ? searchTerm : (selectedEmp ? `${selectedEmp.name} ${selectedEmp.surname || ''}` : '');
+
+    const filteredEmployees = employees.filter(emp => {
+        const safeName = emp.name || '';
+        const safeSurname = emp.surname || '';
+        return `${safeName} ${safeSurname}`.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+                setSearchTerm(''); 
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [wrapperRef]);
+
+    const handleSelect = (employee) => {
+        setSearchTerm(''); 
+        setIsOpen(false);
+        onSelect(employee.id.toString()); 
+    };
+
+    return (
+        <div className="relative w-full" ref={wrapperRef}>
+            <div className="relative group">
+                <input
+                    type="text"
+                    className="w-full p-3 pl-4 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all font-bold text-gray-800 cursor-pointer"
+                    placeholder="Escribe para buscar empleado..."
+                    value={displayValue}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setIsOpen(true);
+                    }}
+                    onClick={() => setIsOpen(true)} 
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-400 group-hover:text-indigo-500 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+            </div>
+
+            {isOpen && (
+                <ul className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-60 overflow-auto divide-y divide-gray-50">
+                    {filteredEmployees.length > 0 ? (
+                        filteredEmployees.map((emp) => (
+                            <li
+                                key={emp.id}
+                                className="px-4 py-3 hover:bg-indigo-50 cursor-pointer transition-colors flex items-center gap-3"
+                                onClick={() => handleSelect(emp)}
+                            >
+                                <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                    {emp?.name?.charAt(0) || ''}{emp?.surname?.charAt(0) || ''}
+                                </div>
+                                <div className="truncate">
+                                    <span className="font-bold text-gray-900">{emp.name}</span> <span className="text-gray-600">{emp.surname || ''}</span>
+                                    {!emp.active && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold uppercase">Inactivo</span>}
+                                </div>
+                            </li>
+                        ))
+                    ) : (
+                        <li className="px-5 py-6 text-gray-500 text-center font-medium">No se encontraron empleados.</li>
+                    )}
+                </ul>
+            )}
+        </div>
+    );
+};
 
 function GlobalInvoicesView({ onBack }) {
     const [employees, setEmployees] = useState([]);
@@ -254,7 +333,6 @@ function GlobalInvoicesView({ onBack }) {
             });
         } catch (err) {
             console.error("Error guardando el log de descarga:", err);
-            // No bloqueamos la app si falla el log, pero lo registramos en consola
         }
         
         if (!isDraft) {
@@ -263,42 +341,36 @@ function GlobalInvoicesView({ onBack }) {
     };
 
     return (
-        <div className="w-full max-w-full mx-auto px-4 pb-10">
-            {/* Header de Controles */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div className="w-full max-w-full mx-auto px-4 md:px-6 pb-10 animate-fade-in-up">
+            {/* Header Adaptable a Móvil */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+                    <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-indigo-600 transition-colors">
                         <BackIcon />
                     </button>
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800">Facturas Globales</h2>
-                        <p className="text-gray-500 text-sm">Visualizar y descargar facturas del personal</p>
+                        <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Facturas Globales</h2>
+                        <p className="text-gray-500 font-medium text-sm">Visualizar y descargar PDFs</p>
                     </div>
                 </div>
             </div>
 
-            {/* Selectores */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Seleccionar Empleado</label>
-                    <select 
-                        value={selectedEmployee} 
-                        onChange={(e) => setSelectedEmployee(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                    >
-                        {employees.map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                                {emp.name} {emp.surname} {emp.active ? '' : '(Inactivo)'}
-                            </option>
-                        ))}
-                    </select>
+            {/* Selectores mejorados y apilables en móvil */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
+                <div className="w-full">
+                    <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Empleado</label>
+                    <SearchableEmployeeSelect 
+                        employees={employees} 
+                        selectedEmployeeId={selectedEmployee} 
+                        onSelect={setSelectedEmployee} 
+                    />
                 </div>
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Seleccionar Periodo (Quincena)</label>
+                <div className="w-full">
+                    <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Periodo (Quincena)</label>
                     <select 
                         value={selectedPeriod} 
                         onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                        className="w-full p-3 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all font-bold text-gray-800 cursor-pointer h-[52px]"
                     >
                         {periods.map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -309,93 +381,99 @@ function GlobalInvoicesView({ onBack }) {
 
             {/* Vista Previa de la Factura y Tabla de Turnos */}
             {loading ? (
-                <div className="text-center p-10 text-gray-500 animate-pulse font-medium">Calculando datos de la factura...</div>
+                <div className="text-center p-12 bg-white rounded-3xl shadow-sm border border-gray-100">
+                    <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500 font-medium animate-pulse">Calculando datos de la factura...</p>
+                </div>
             ) : (
-                <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-w-4xl mx-auto">
-                    <div className="p-8 border-b-8 border-indigo-600">
-                        {/* Resumen Superior */}
-                        <div className="flex justify-between items-start mb-8">
+                <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden max-w-4xl mx-auto">
+                    <div className="p-6 md:p-10 border-t-8 border-indigo-600">
+                        
+                        {/* Resumen Superior Responsivo */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 border-b border-gray-100 pb-6">
                             <div>
-                                <h3 className="text-3xl font-black text-gray-800 tracking-tight">RESUMEN DE FACTURACIÓN</h3>
-                                <p className="text-gray-500 mt-1">
+                                <h3 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">RESUMEN DE FACTURACIÓN</h3>
+                                <p className="text-gray-500 font-medium mt-1">
                                     Periodo: {selectedPeriod && format(parseISO(selectedPeriod), 'dd/MM/yyyy')} - {selectedPeriod && format(addDays(parseISO(selectedPeriod), 13), 'dd/MM/yyyy')}
                                 </p>
                             </div>
-                            <div className="text-right">
-                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Gran Total</p>
+                            <div className="text-left md:text-right w-full md:w-auto bg-indigo-50 md:bg-transparent p-4 md:p-0 rounded-xl">
+                                <p className="text-sm font-bold text-indigo-400 md:text-gray-400 uppercase tracking-wider">Gran Total</p>
                                 <p className="text-4xl font-black text-indigo-600">${invoiceData.grandTotal.toFixed(2)}</p>
                             </div>
                         </div>
 
-                        {/* Tarjeta de Empleado y Estado de Factura */}
-                        <div className="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-200 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-500">Empleado Seleccionado</p>
-                                <p className="font-bold text-gray-800 text-lg">
+                        {/* Tarjetas de Datos: Apiladas en móvil, en fila en PC */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200 text-center sm:text-left">
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Empleado Seleccionado</p>
+                                <p className="font-bold text-gray-800 text-lg leading-tight">
                                     {employees.find(e => e.id.toString() === selectedEmployee)?.name}{' '}
                                     {employees.find(e => e.id.toString() === selectedEmployee)?.surname}
                                 </p>
                             </div>
                             
-                            <div className="text-center px-4 border-l border-r border-gray-200">
-                                <p className="text-sm text-gray-500">Estado de Factura</p>
+                            <div className={`rounded-2xl p-5 border text-center ${isInvoiceSavedInDb ? 'bg-emerald-50 border-emerald-100' : 'bg-orange-50 border-orange-100'}`}>
+                                <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isInvoiceSavedInDb ? 'text-emerald-600' : 'text-orange-600'}`}>
+                                    Estado del Documento
+                                </p>
                                 {isInvoiceSavedInDb ? (
                                     <>
                                         <p className="font-black text-xl text-emerald-600">N° {invoiceNum}</p>
-                                        <p className="text-[10px] font-bold text-emerald-500 mt-1 uppercase">Periodo Cerrado</p>
+                                        <p className="text-[10px] font-bold text-white bg-emerald-500 inline-block px-2 py-0.5 rounded-full mt-1 uppercase shadow-sm">Emitida</p>
                                     </>
                                 ) : (
                                     <>
                                         <p className="font-black text-xl text-orange-500">Pendiente</p>
-                                        <p className="text-[10px] font-bold text-orange-400 mt-1 uppercase">No Emitida</p>
+                                        <p className="text-[10px] font-bold text-white bg-orange-400 inline-block px-2 py-0.5 rounded-full mt-1 uppercase shadow-sm">Borrador</p>
                                     </>
                                 )}
                             </div>
 
-                            <div className="text-right">
-                                <p className="text-sm text-gray-500">Tarifa por Hora</p>
-                                <p className="font-bold text-gray-800 text-lg">
-                                    ${employees.find(e => e.id.toString() === selectedEmployee)?.hourly_rate}/hr
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200 text-center sm:text-right">
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Tarifa Configurada</p>
+                                <p className="font-black text-2xl text-gray-800">
+                                    ${employees.find(e => e.id.toString() === selectedEmployee)?.hourly_rate}<span className="text-sm text-gray-400 font-bold">/hr</span>
                                 </p>
                             </div>
                         </div>
 
-                        {/* Tabla Detallada de Turnos */}
-                        <div className="mb-8">
-                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Detalle de Turnos Trabajados</h4>
+                        {/* Tabla Detallada de Turnos (Con scroll horizontal para celular) */}
+                        <div className="mb-10">
+                            <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4 border-l-4 border-indigo-500 pl-3">Detalle de Turnos Trabajados</h4>
                             {invoiceData.shifts.length === 0 || invoiceData.totalHours === 0 ? (
-                                <div className="text-center p-6 bg-orange-50 rounded-lg border border-orange-200">
-                                    <p className="text-orange-800 font-medium">Este empleado no tiene horas registradas en este periodo.</p>
+                                <div className="text-center p-8 bg-orange-50/50 rounded-2xl border border-orange-100">
+                                    <p className="text-orange-800 font-bold">Este empleado no tiene horas registradas en este periodo.</p>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                <div className="overflow-x-auto rounded-2xl border border-gray-200 custom-scrollbar">
                                     <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                        <thead className="bg-gray-100">
+                                        <thead className="bg-gray-50">
                                             <tr>
-                                                <th className="px-4 py-3 text-left font-bold text-gray-600">Fecha</th>
-                                                <th className="px-4 py-3 text-right font-bold text-gray-600">Horas Trabajadas</th>
-                                                <th className="px-4 py-3 text-right font-bold text-gray-600">Total Generado</th>
+                                                <th className="px-6 py-4 text-left font-bold text-gray-500 uppercase tracking-wider text-xs">Fecha</th>
+                                                <th className="px-6 py-4 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Horas Trabajadas</th>
+                                                <th className="px-6 py-4 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Total Generado</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-200 bg-white">
+                                        <tbody className="divide-y divide-gray-100 bg-white">
                                             {invoiceData.shifts.map((shift, idx) => {
                                                 if (Number(shift.duration) === 0) return null; 
                                                 return (
-                                                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                                        <td className="px-4 py-3 text-gray-800 font-medium">{format(parseISO(shift.date), 'dd/MM/yyyy')}</td>
-                                                        <td className="px-4 py-3 text-right text-gray-600">{Number(shift.duration).toFixed(2)} h</td>
-                                                        <td className="px-4 py-3 text-right text-gray-800 font-medium">
+                                                    <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
+                                                        <td className="px-6 py-4 text-gray-800 font-bold">{format(parseISO(shift.date), 'dd/MM/yyyy')}</td>
+                                                        <td className="px-6 py-4 text-right text-gray-600 font-medium">{Number(shift.duration).toFixed(2)} h</td>
+                                                        <td className="px-6 py-4 text-right text-gray-900 font-black">
                                                             ${Number(shift.total || shift.duration * shift.rate).toFixed(2)}
                                                         </td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
-                                        <tfoot className="bg-gray-100">
+                                        <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                                             <tr>
-                                                <td className="px-4 py-3 font-bold text-gray-800 text-right">TOTALES</td>
-                                                <td className="px-4 py-3 font-bold text-gray-800 text-right">{invoiceData.totalHours.toFixed(2)} h</td>
-                                                <td className="px-4 py-3 font-black text-indigo-700 text-right text-base">${invoiceData.grandTotal.toFixed(2)}</td>
+                                                <td className="px-6 py-5 font-black text-gray-800 text-right text-xs uppercase tracking-wider">TOTALES</td>
+                                                <td className="px-6 py-5 font-black text-gray-800 text-right">{invoiceData.totalHours.toFixed(2)} h</td>
+                                                <td className="px-6 py-5 font-black text-indigo-600 text-right text-xl">${invoiceData.grandTotal.toFixed(2)}</td>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -403,27 +481,29 @@ function GlobalInvoicesView({ onBack }) {
                             )}
                         </div>
 
-                        {/* BOTONES DE DESCARGA (Lógica de Reacción al Cierre) */}
+                        {/* BOTONES DE DESCARGA RESPONSIVOS */}
                         {invoiceData.totalHours > 0 && (
-                            <div className="flex flex-col md:flex-row gap-4">
+                            <div className="flex flex-col mt-4">
                                 {isInvoiceSavedInDb ? (
                                     <button 
-                                        onClick={() => generatePDF(false)} // false = Oficial
-                                        className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl shadow hover:bg-emerald-700 transition-all flex justify-center items-center gap-2 text-lg"
+                                        onClick={() => generatePDF(false)} 
+                                        className="w-full bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-lg shadow-emerald-200 hover:bg-emerald-600 hover:-translate-y-1 transition-all flex justify-center items-center gap-3 text-lg"
                                     >
                                         <DownloadIcon className="w-6 h-6" /> Descargar Factura
                                     </button>
                                 ) : (
-                                    <div className="w-full flex flex-col gap-2">
-                                        <div className="bg-orange-50 text-orange-800 p-4 rounded-xl border border-orange-200 text-center">
-                                            <p className="font-bold">⚠️ Periodo no cerrado</p>
-                                            <p className="text-sm">Ve al "Editor de Turnos" y haz clic en "Emitir Facturas" para generar el documento oficial.</p>
+                                    <div className="w-full flex flex-col gap-4">
+                                        <div className="bg-orange-50/80 text-orange-800 p-5 rounded-2xl border border-orange-100 text-center">
+                                            <p className="font-bold flex items-center justify-center gap-2 text-orange-700">
+                                                <span className="text-xl">⚠️</span> Periodo no cerrado
+                                            </p>
+                                            <p className="text-sm mt-2 font-medium">Ve al "Editor de Turnos" y haz clic en "Emitir Facturas" para generar el documento oficial.</p>
                                         </div>
                                         <button 
-                                            onClick={() => generatePDF(true)} // true = Borrador
-                                            className="w-full bg-white text-gray-700 border-2 border-gray-300 font-bold py-3 rounded-xl shadow-sm hover:bg-gray-50 transition-all flex justify-center items-center gap-2"
+                                            onClick={() => generatePDF(true)} 
+                                            className="w-full bg-white text-gray-700 border-2 border-gray-200 font-bold py-4 rounded-2xl shadow-sm hover:bg-gray-50 transition-all flex justify-center items-center gap-2 text-lg hover:border-gray-300"
                                         >
-                                            <span className="text-xl">👁️</span> Descargar Borrador (No Oficial)
+                                            <span className="text-2xl">👁️</span> Previsualizar Borrador
                                         </button>
                                     </div>
                                 )}
@@ -435,19 +515,19 @@ function GlobalInvoicesView({ onBack }) {
 
             {/* MODAL DE NOTIFICACIÓN / FEEDBACK */}
             {feedback.isOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all animate-fade-in-up">
-                        <div className={`p-6 text-center ${feedback.type === 'error' ? 'bg-red-50' : feedback.type === 'success' ? 'bg-green-50' : 'bg-blue-50'}`}>
-                            <div className={`mx-auto flex items-center justify-center h-14 w-14 rounded-full mb-4 shadow-sm ${feedback.type === 'error' ? 'bg-red-100 text-red-600' : feedback.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
-                                <span className="text-2xl">{feedback.type === 'error' ? '❌' : feedback.type === 'success' ? '✅' : 'ℹ️'}</span>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all animate-fade-in-up">
+                        <div className={`p-8 text-center ${feedback.type === 'error' ? 'bg-red-50/50' : feedback.type === 'success' ? 'bg-emerald-50/50' : 'bg-blue-50/50'}`}>
+                            <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-5 shadow-sm ${feedback.type === 'error' ? 'bg-red-100 text-red-600' : feedback.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                                <span className="text-3xl">{feedback.type === 'error' ? '❌' : feedback.type === 'success' ? '✅' : 'ℹ️'}</span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">{feedback.title}</h3>
-                            <p className="text-sm text-gray-600">{feedback.message}</p>
+                            <h3 className="text-xl font-black text-gray-900 mb-2">{feedback.title}</h3>
+                            <p className="text-sm text-gray-600 font-medium leading-relaxed">{feedback.message}</p>
                         </div>
                         <div className="p-4 bg-white flex justify-center border-t border-gray-100">
                             <button 
                                 onClick={() => setFeedback({ ...feedback, isOpen: false })}
-                                className="px-6 py-2.5 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-900 w-full shadow-md transition-colors"
+                                className="px-6 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black w-full shadow-lg hover:shadow-xl transition-all"
                             >
                                 Entendido
                             </button>

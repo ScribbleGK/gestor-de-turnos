@@ -1,103 +1,218 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+import { useAuth } from '../hooks/useAuth';
+import { getFortnightStart } from '../utils/date';
+import { addDays, format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale'; 
 import { BackIcon } from '../icons';
-import { getFortnightStartDate } from '../utils/date';
-import apiUrl from '../apiConfig';
 
 function TableView({ onBack }) {
-  const [timesheetData, setTimesheetData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+    const { currentUser } = useAuth();
+    const [periods, setPeriods] = useState([]);
+    const [selectedPeriod, setSelectedPeriod] = useState('');
+    const [gridData, setGridData] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [totals, setTotals] = useState({ hours: 0, money: 0 });
 
-  useEffect(() => {
-    const fetchTimesheet = async () => {
-      const startDate = getFortnightStartDate();
-      try {
-        const response = await fetch(`${apiUrl}/employees/timesheet?startDate=${startDate}`);
-        if (!response.ok) {
-          throw new Error('Error al obtener los datos del timesheet');
+    // 1. CARGAR PERIODOS AL INICIAR
+    useEffect(() => {
+        const loadPeriods = async () => {
+            try {
+                const { data: datesData } = await supabase
+                    .from('attendances')
+                    .select('date')
+                    .eq('employee_id', currentUser.id)
+                    .order('date', { ascending: false });
+
+                const uniqueFortnights = new Set();
+                if (datesData) {
+                    datesData.forEach(item => {
+                        const fStart = getFortnightStart(parseISO(item.date));
+                        uniqueFortnights.add(format(fStart, 'yyyy-MM-dd'));
+                    });
+                }
+
+                const current = getFortnightStart(new Date());
+                uniqueFortnights.add(format(current, 'yyyy-MM-dd'));
+
+                const sortedPeriods = Array.from(uniqueFortnights)
+                    .sort((a, b) => new Date(b) - new Date(a))
+                    .map(dateStr => {
+                        const start = parseISO(dateStr);
+                        const end = addDays(start, 13);
+                        return {
+                            value: dateStr,
+                            label: `${format(start, 'dd/MM/yyyy')} - ${format(end, 'dd/MM/yyyy')}`
+                        };
+                    });
+
+                setPeriods(sortedPeriods);
+                if (sortedPeriods.length > 0) {
+                    setSelectedPeriod(sortedPeriods[0].value);
+                }
+            } catch (error) {
+                console.error("Error calculando periodos:", error);
+            }
+        };
+
+        if (currentUser) {
+            loadPeriods();
         }
-        const data = await response.json();
-        setTimesheetData(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    }, [currentUser]);
 
-    fetchTimesheet();
-  }, []);
+    // 2. BUSCAR LOS TURNOS DE LA QUINCENA SELECCIONADA
+    useEffect(() => {
+        const fetchMyAttendances = async () => {
+            if (!selectedPeriod || !currentUser) return;
+            
+            setLoading(true);
+            try {
+                const startDate = parseISO(selectedPeriod);
+                const endDate = addDays(startDate, 14); 
 
-  if (isLoading) {
-    return <div className="p-4">Cargando horarios...</div>;
-  }
+                const { data: atts, error } = await supabase
+                    .from('attendances')
+                    .select('*')
+                    .eq('employee_id', currentUser.id)
+                    .gte('date', format(startDate, 'yyyy-MM-dd'))
+                    .lt('date', format(endDate, 'yyyy-MM-dd'));
 
-  if (!timesheetData) {
-    return <div className="p-4">Error al cargar los datos.</div>;
-  }
+                if (error) throw error;
 
-  const { data } = { data: timesheetData };
-  const days = ['L', 'M', 'M', 'J', 'V', 'S'];
+                const grid = {};
+                let totalH = 0;
+                let totalM = 0;
 
-  const renderDayHeaders = () => {
-    const headers = [];
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(data.startDate);
-      const offset = i + Math.floor(i / 6);
-      date.setUTCDate(date.getUTCDate() + offset);
-      const isLastDayOfWeek = (i + 1) % 6 === 0;
-      headers.push(
-        <th key={i} className={`p-2 border-l border-gray-300 text-center ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
-          <span className="text-xs font-medium text-gray-500">{days[i % 6]}</span>
-          <span className="block text-sm font-semibold text-gray-800">{date.getUTCDate()}</span>
-        </th>
-      );
-    }
-    return headers;
-  };
+                if (atts) {
+                    atts.forEach(att => {
+                        const dateStr = att.date;
+                        grid[dateStr] = att.duration;
+                        
+                        totalH += Number(att.duration);
+                        const rate = att.rate || currentUser.hourly_rate;
+                        totalM += (Number(att.duration) * rate);
+                    });
+                }
+                
+                setGridData(grid);
+                setTotals({ hours: totalH, money: totalM });
 
-  return (
-    <div className="w-full max-w-7xl mx-auto">
-      <header className="flex items-center mb-6">
-        <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-200 mr-4">
-          <BackIcon />
-        </button>
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Tabla de Horarios</h2>
-          <p className="text-gray-500">Quincena del {new Date(data.startDate).toLocaleDateString('es-ES')}</p>
+            } catch (error) {
+                console.error("Error cargando turnos:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMyAttendances();
+    }, [selectedPeriod, currentUser]);
+
+    const days = selectedPeriod ? Array.from({ length: 14 }, (_, i) => addDays(parseISO(selectedPeriod), i)) : [];
+
+    return (
+        <div className="w-full max-w-3xl mx-auto px-4 pb-10 animate-fade-in-up">
+            
+            {/* Cabecera */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-indigo-600 transition-colors">
+                        <BackIcon />
+                    </button>
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-900 tracking-tight">Mis Horarios</h2>
+                        <p className="text-gray-500 font-medium mt-1">Consulta tus horas registradas</p>
+                    </div>
+                </div>
+
+                <div className="w-full md:w-auto">
+                    <select 
+                        value={selectedPeriod} 
+                        onChange={(e) => setSelectedPeriod(e.target.value)}
+                        className="w-full md:w-64 p-3 border-2 border-gray-200 rounded-xl text-gray-800 font-bold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all cursor-pointer bg-gray-50 hover:bg-white shadow-sm"
+                    >
+                        {periods.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Tarjetas de Resumen Rápido (El diseño que te gustó, intacto y centrado) */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 text-center transform transition-transform hover:-translate-y-1">
+                    <p className="text-gray-400 font-bold text-xs sm:text-sm uppercase tracking-wider mb-2">Total Horas</p>
+                    <p className="text-3xl sm:text-4xl font-black text-indigo-600">
+                        {loading ? '...' : totals.hours.toFixed(2)} <span className="text-lg text-indigo-300 font-bold">h</span>
+                    </p>
+                </div>
+                <div className="bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 text-center transform transition-transform hover:-translate-y-1">
+                    <p className="text-gray-400 font-bold text-xs sm:text-sm uppercase tracking-wider mb-2">Generado Est.</p>
+                    <p className="text-3xl sm:text-4xl font-black text-emerald-500">
+                        {loading ? '...' : `$${totals.money.toFixed(2)}`}
+                    </p>
+                </div>
+            </div>
+
+            {/* Detalle Diario (Nuevo Diseño Ultra-Limpio) */}
+            <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+                <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                    <h3 className="font-bold text-gray-800 text-lg">Detalle por Día</h3>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider px-3 py-1 bg-white rounded-full border border-gray-200 shadow-sm">
+                        Quincena Actual
+                    </span>
+                </div>
+                
+                {loading ? (
+                    <div className="p-12 text-center">
+                        <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-gray-500 font-medium animate-pulse">Cargando turnos...</p>
+                    </div>
+                ) : (
+                    <ul className="divide-y divide-gray-50">
+                        {days.map((day, i) => {
+                            const dateStr = format(day, 'yyyy-MM-dd');
+                            const hoursWorked = gridData[dateStr] || 0;
+                            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                            const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+
+                            return (
+                                <li key={i} className={`flex justify-between items-center p-4 sm:px-6 hover:bg-indigo-50/30 transition-colors ${isToday ? 'bg-indigo-50/10' : ''}`}>
+                                    <div className="flex items-center gap-4">
+                                        {/* Indicador visual lateral */}
+                                        <div className={`w-1.5 h-10 rounded-full ${hoursWorked > 0 ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]' : 'bg-gray-200'}`}></div>
+                                        
+                                        <div>
+                                            <p className="font-bold text-gray-800 text-base sm:text-lg capitalize flex items-center gap-2">
+                                                {format(day, 'EEEE', { locale: es })}
+                                                {isToday && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Hoy</span>}
+                                            </p>
+                                            <p className={`text-sm ${isWeekend && hoursWorked === 0 ? 'text-gray-400' : 'text-gray-500 font-medium'}`}>
+                                                {format(day, 'dd MMM', { locale: es })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="text-right">
+                                        {hoursWorked > 0 ? (
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-xl font-black text-indigo-600">{hoursWorked.toFixed(2)}</span>
+                                                <span className="text-sm font-bold text-indigo-300">hrs</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs font-bold text-gray-400 bg-gray-100/80 px-3 py-1.5 rounded-lg uppercase tracking-wider">
+                                                Libre
+                                            </span>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </div>
+
         </div>
-      </header>
-
-      <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-200 border-b-2 border-gray-300 ">
-              <tr>
-                <th className="p-2 text-left font-semibold text-gray-700 sticky left-0 bg-gray-200 z-10 w-40 ">Empleado</th>
-                {renderDayHeaders()}
-                <th className="p-2 border-l border-gray-300 font-semibold text-gray-700 w-24">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.employees.map((employee) => (
-                <tr key={employee.name} className="border-b border-gray-200 last:border-b-0">
-                  <td className="p-2 font-medium text-gray-800 sticky left-0 bg-gray-100 hover:bg-gray-200 z-10">{employee.name}</td>
-                  {employee.hours.map((hour, index) => {
-                    const isLastDayOfWeek = (index + 1) % 6 === 0;
-                    return (
-                      <td key={index} className={`p-2 text-center border-l border-gray-200 ${isLastDayOfWeek ? 'border-r-2 border-r-gray-300' : ''}`}>
-                        {hour !== null ? hour.toFixed(1) : <span className="text-gray-400">-</span>}
-                      </td>
-                    )
-                  })}
-                  <td className="p-2 text-center border-l border-gray-200 font-bold text-indigo-600">{employee.total.toFixed(1)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 export default TableView;

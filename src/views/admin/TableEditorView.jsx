@@ -9,7 +9,6 @@ import Modal from '../../components/Modal';
 import { DownloadIcon, SaveIcon, BackIcon } from '../../icons';
 
 function TableEditorView({ onBack }) {
-    // ESTADOS ORIGINALES
     const [periods, setPeriods] = useState([]);
     const [selectedPeriod, setSelectedPeriod] = useState('');
     const [employees, setEmployees] = useState([]);
@@ -20,21 +19,20 @@ function TableEditorView({ onBack }) {
     const [showModal, setShowModal] = useState(false);
     const [pendingChanges, setPendingChanges] = useState([]);
 
-    // ESTADOS PARA CIERRE DE PERIODO
     const [pendingInvoices, setPendingInvoices] = useState(0);
     const [employeesToInvoice, setEmployeesToInvoice] = useState([]);
     const [showCloseModal, setShowCloseModal] = useState(false);
     // eslint-disable-next-line no-unused-vars
     const [isClosing, setIsClosing] = useState(false);
 
-    // --- NUEVO: ESTADO PARA ALERTAS ELEGANTES (Sustituye a window.alert) ---
+    const [searchTerm, setSearchTerm] = useState('');
+
     const [feedback, setFeedback] = useState({ isOpen: false, title: '', message: '', type: 'info' });
 
     const showFeedback = (title, message, type = 'info') => {
         setFeedback({ isOpen: true, title, message, type });
     };
 
-    // Formateadores
     const formatNameDesktop = (name, surname) => {
         const firstName = name ? name.split(' ')[0] : ''; 
         const firstSurname = surname ? surname.split(' ')[0] : ''; 
@@ -47,7 +45,6 @@ function TableEditorView({ onBack }) {
         return `${firstName} ${firstSurnameInitial}.`;
     };
 
-    // 1. CARGA INICIAL
     useEffect(() => {
         loadSmartPeriods();
     }, []);
@@ -95,7 +92,6 @@ function TableEditorView({ onBack }) {
         }
     };
 
-    // 2. CARGAR DATOS 
     useEffect(() => {
         if (selectedPeriod) {
             fetchData();
@@ -134,7 +130,6 @@ function TableEditorView({ onBack }) {
             setGridData(grid);
             setOriginalData(JSON.parse(JSON.stringify(grid))); 
 
-            // CÁLCULO DE FACTURAS PENDIENTES
             const { data: logs } = await supabase
                 .from('invoices_log')
                 .select('employee_id')
@@ -175,6 +170,38 @@ function TableEditorView({ onBack }) {
 
     const days = selectedPeriod ? Array.from({ length: 14 }, (_, i) => addDays(parseISO(selectedPeriod), i)) : [];
 
+    const getDisplayedEmployees = () => {
+        if (loading) return [];
+
+        let sorted = [...employees].sort((a, b) => {
+            let aHasHours = false;
+            let bHasHours = false;
+            
+            for (let i = 0; i < 14; i++) {
+                const dStr = format(days[i], 'yyyy-MM-dd');
+                if (gridData[`${a.id}_${dStr}`]?.duration > 0) aHasHours = true;
+                if (gridData[`${b.id}_${dStr}`]?.duration > 0) bHasHours = true;
+            }
+
+            if (aHasHours && !bHasHours) return -1;
+            if (!aHasHours && bHasHours) return 1;
+
+            const nameA = `${a.name} ${a.surname || ''}`.toLowerCase();
+            const nameB = `${b.name} ${b.surname || ''}`.toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+
+        if (searchTerm) {
+            sorted = sorted.filter(emp => 
+                `${emp.name} ${emp.surname || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        return sorted;
+    };
+
+    const displayedEmployees = getDisplayedEmployees();
+
     const calculateDailyTotals = () => {
         return days.map(day => {
             const dateStr = format(day, 'yyyy-MM-dd');
@@ -189,7 +216,6 @@ function TableEditorView({ onBack }) {
     const dailyTotals = calculateDailyTotals();
     const grandTotalPeriod = dailyTotals.reduce((a, b) => a + b, 0);
 
-    // 4. MANEJO DE EDICIÓN Y GUARDADO
     const handleCellChange = (empId, dateStr, value) => {
         const key = `${empId}_${dateStr}`;
         const numValue = value === '' ? 0 : parseFloat(value);
@@ -274,7 +300,6 @@ function TableEditorView({ onBack }) {
         }
     };
 
-    // 5. FUNCIÓN PARA EMITIR FACTURAS (CIERRE)
     const executePeriodClose = async () => {
         setIsClosing(true);
         try {
@@ -320,7 +345,6 @@ function TableEditorView({ onBack }) {
         }
     };
 
-    // 6. DESCARGAR PDF GRID (CORREGIDO: FILTRA EMPLEADOS CON 0 HORAS)
     const downloadPDF = () => {
         if (!selectedPeriod || employees.length === 0 || grandTotalPeriod === 0) {
             showFeedback('Atención', 'No hay turnos registrados en este periodo para generar el PDF.', 'info');
@@ -336,8 +360,9 @@ function TableEditorView({ onBack }) {
 
         const tableHead = [['Employee', ...days.map(d => format(d, 'dd/MM (EEE)')), 'Total']];
         
-        // LÓGICA DE FILTRADO RESTAURADA
-        const tableBody = employees.reduce((acc, emp) => {
+        const pdfSortedEmployees = [...employees].sort((a,b) => `${a.name}`.localeCompare(`${b.name}`));
+        
+        const tableBody = pdfSortedEmployees.reduce((acc, emp) => {
             let totalRow = 0;
             const rowCells = days.map(d => {
                 const key = `${emp.id}_${format(d, 'yyyy-MM-dd')}`;
@@ -346,7 +371,6 @@ function TableEditorView({ onBack }) {
                 return val > 0 ? val.toFixed(2) : ''; 
             });
 
-            // Solo agregamos la fila si el empleado trabajó
             if (totalRow > 0) {
                 acc.push([
                     formatNameDesktop(emp.name, emp.surname),
@@ -357,7 +381,6 @@ function TableEditorView({ onBack }) {
             return acc;
         }, []);
 
-        // Agregamos la fila final de totales
         tableBody.push(['DAILY TOTAL', ...dailyTotals.map(t => t > 0 ? t.toFixed(2) : ''), grandTotalPeriod.toFixed(2)]);
 
         autoTable(doc, {
@@ -376,19 +399,19 @@ function TableEditorView({ onBack }) {
     };
 
     return (
-        <div className="w-full max-w-full mx-auto px-4 pb-10">
+        <div className="w-full max-w-full mx-auto px-2 md:px-4 pb-10">
             {/* Header de Controles */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4 bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 md:gap-4 w-full lg:w-auto">
+                    <button onClick={onBack} className="p-2 md:p-3 hover:bg-gray-100 rounded-full text-gray-600 transition-colors flex-shrink-0">
                         <BackIcon />
                     </button>
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-800">Editor de Turnos</h2>
+                    <div className="flex-1">
+                        <h2 className="text-lg md:text-xl font-bold text-gray-800 leading-tight">Editor de Turnos</h2>
                         <select 
                             value={selectedPeriod} 
                             onChange={(e) => setSelectedPeriod(e.target.value)}
-                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 rounded-md bg-gray-50 border cursor-pointer font-medium"
+                            className="mt-1 block w-full text-sm md:text-base p-2 md:py-2.5 md:pl-3 md:pr-10 border-gray-300 focus:outline-none focus:ring-indigo-500 rounded-lg bg-gray-50 border cursor-pointer font-medium"
                         >
                             {periods.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -397,137 +420,182 @@ function TableEditorView({ onBack }) {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full lg:w-auto justify-end items-stretch sm:items-center mt-2 lg:mt-0">
                     
-                    {/* BOTÓN DE CIERRE (LÓGICA CORREGIDA) */}
+                    <div className="relative w-full sm:w-64 lg:w-72">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar empleado..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                        />
+                    </div>
+
                     {!isEditing && (
                         grandTotalPeriod === 0 ? (
-                            <div className="bg-gray-100 text-gray-500 border border-gray-200 px-5 py-2.5 rounded-lg font-medium flex items-center gap-2">
-                                ⏳ Sin turnos registrados
+                            <div className="bg-gray-100 text-gray-500 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 w-full sm:w-auto">
+                                ⏳ Sin turnos
                             </div>
                         ) : pendingInvoices > 0 ? (
                             <button 
                                 onClick={() => setShowCloseModal(true)}
-                                className="bg-orange-500 text-white px-5 py-2.5 rounded-lg hover:bg-orange-600 font-bold shadow transition-all flex items-center gap-2"
+                                className="bg-orange-500 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-orange-600 font-bold shadow transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                             >
-                                🔒 Emitir Facturas ({pendingInvoices})
+                                🔒 Emitir ({pendingInvoices})
                             </button>
                         ) : (
-                            <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-5 py-2.5 rounded-lg font-bold flex items-center gap-2">
-                                ✅ Facturas Emitidas
+                            <div className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
+                                ✅ Emitidas
                             </div>
                         )
                     )}
 
-                    {/* BOTONES ORIGINALES */}
                     {!isEditing ? (
                         <>
                             <button 
                                 onClick={() => setIsEditing(true)}
-                                className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 font-bold shadow transition-all"
+                                className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-indigo-700 font-bold shadow transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                             >
-                                ✏️ Editar Tabla
+                                ✏️ Editar
                             </button>
                             <button 
                                 onClick={downloadPDF}
-                                className="bg-gray-800 text-white px-5 py-2.5 rounded-lg hover:bg-gray-900 font-bold shadow flex items-center gap-2"
+                                className="bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-gray-900 font-bold shadow flex items-center justify-center gap-2 w-full sm:w-auto"
                             >
-                                <DownloadIcon className="w-5 h-5"/> Resumen PDF
+                                <DownloadIcon className="w-4 h-4"/> PDF
                             </button>
                         </>
                     ) : (
                         <>
                             <button 
                                 onClick={() => { setIsEditing(false); setGridData(originalData); }} 
-                                className="bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-lg hover:bg-gray-50 font-medium"
+                                className="bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl text-sm hover:bg-gray-50 font-medium w-full sm:w-auto"
                             >
                                 Cancelar
                             </button>
                             <button 
                                 onClick={handlePreSave}
-                                className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 font-bold shadow flex items-center gap-2"
+                                className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-indigo-700 font-bold shadow flex items-center justify-center gap-2 w-full sm:w-auto"
                             >
-                                <SaveIcon className="w-5 h-5"/> Guardar Cambios
+                                <SaveIcon className="w-4 h-4"/> Guardar
                             </button>
                         </>
                     )}
                 </div>
             </div>
 
-            {/* TABLA PRINCIPAL */}
-            <div className="overflow-x-auto bg-white rounded-lg shadow border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-20 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                Empleado
-                            </th>
-                            {days.map((day, i) => (
-                                <th key={i} className={`px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px] ${i === 6 ? 'border-r-2 border-r-gray-300' : ''}`}>
-                                    <div className="font-bold text-gray-700">{format(day, 'EEE', { locale: es })}</div>
-                                    <div className="text-gray-400 text-[10px]">{format(day, 'dd/MM')}</div>
-                                </th>
-                            ))}
-                            <th className="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider sticky right-0 bg-gray-50 z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                Total
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {loading ? (
-                            <tr><td colSpan="16" className="text-center p-10 text-gray-500">Cargando datos...</td></tr>
-                        ) : employees.map((emp) => {
-                            let rowTotal = 0;
-                            return (
-                                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-6 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                        <span className="hidden md:inline">{formatNameDesktop(emp.name, emp.surname)}</span>
-                                        <span className="inline md:hidden">{formatNameMobile(emp.name, emp.surname)}</span>
-                                    </td>
-                                    {days.map((day, i) => {
-                                        const dateStr = format(day, 'yyyy-MM-dd');
-                                        const key = `${emp.id}_${dateStr}`;
-                                        const val = gridData[key]?.duration || 0;
-                                        rowTotal += val;
+            {/* TABLA UNIFICADA MÓVIL/PC (Desplazamiento Horizontal Robusto) */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative flex flex-col">
+                
+                {/* Indicador visual de deslizamiento (Solo visible en móviles) */}
+                <div className="md:hidden bg-indigo-50 text-indigo-700 text-xs font-bold text-center py-2 flex items-center justify-center gap-2 border-b border-indigo-100">
+                    <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    Desliza la tabla hacia los lados
+                </div>
 
-                                        return (
-                                            <td key={i} className={`p-1 text-center ${i === 6 ? 'border-r-2 border-r-gray-300' : ''}`}>
-                                                <input 
-                                                    type="number" min="0" step="0.01" disabled={!isEditing}
-                                                    value={val === 0 ? '' : val}
-                                                    placeholder={isEditing && val === 0 ? '-' : ''}
-                                                    onChange={(e) => handleCellChange(emp.id, dateStr, e.target.value)}
-                                                    className={`w-full h-12 text-center rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
-                                                        isEditing ? 'border border-gray-300 bg-white hover:border-indigo-400' : 'bg-transparent border-none text-gray-800 cursor-default'
-                                                    } ${val > 0 && !isEditing ? 'font-bold text-indigo-600' : ''}`}
-                                                />
-                                            </td>
-                                        );
-                                    })}
-                                    <td className="px-3 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-center sticky right-0 bg-white z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                        {rowTotal.toFixed(2)}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                    <tfoot className="bg-gray-100 font-bold text-gray-800 border-t-2 border-gray-300">
-                        <tr>
-                            <td className="px-4 py-3 sticky left-0 bg-gray-100 z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs md:text-sm">TOTAL</td>
-                            {dailyTotals.map((total, i) => (
-                                <td key={i} className={`text-center py-2 px-1 text-xs ${i === 6 ? 'border-r-2 border-r-gray-300' : ''}`}>
-                                    {total > 0 ? total.toFixed(2) : '-'}
+                {/* Contenedor con Scroll */}
+                <div className="overflow-x-auto w-full custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    
+                    {/* min-w-max evita el aplastamiento de las columnas */}
+                    <table className="min-w-max w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                {/* Columna Fija de Empleado */}
+                                <th className="px-3 md:px-4 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider sticky left-0 z-30 bg-gray-50 border-r-2 border-gray-200 shadow-[4px_0_10px_-3px_rgba(0,0,0,0.15)] w-[120px] md:w-[160px]">
+                                    Empleado
+                                </th>
+                                
+                                {/* Columnas de Días */}
+                                {days.map((day, i) => (
+                                    <th key={i} className={`px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px] md:w-[90px] ${i === 6 ? 'border-r-2 border-gray-300' : ''}`}>
+                                        <div className="font-bold text-gray-700">{format(day, 'EEE', { locale: es })}</div>
+                                        <div className="text-gray-400 text-[10px]">{format(day, 'dd/MM')}</div>
+                                    </th>
+                                ))}
+                                
+                                {/* Columna Fija de Total */}
+                                <th className="px-3 py-4 text-center text-xs font-bold text-indigo-700 uppercase tracking-wider sticky right-0 z-30 bg-gray-50 border-l-2 border-gray-200 shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.15)] w-[80px]">
+                                    Total
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                            {loading ? (
+                                <tr><td colSpan="16" className="text-center p-10 text-gray-500">Cargando datos...</td></tr>
+                            ) : displayedEmployees.length === 0 ? (
+                                <tr><td colSpan="16" className="text-center p-10 text-gray-500 font-medium">No se encontraron empleados.</td></tr>
+                            ) : displayedEmployees.map((emp) => {
+                                let rowTotal = 0;
+                                return (
+                                    <tr key={emp.id} className="hover:bg-indigo-50/50 transition-colors group">
+                                        
+                                        {/* Celda Fija de Empleado */}
+                                        <td className="px-3 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900 sticky left-0 z-20 bg-white group-hover:bg-indigo-50 transition-colors border-r-2 border-gray-100 shadow-[4px_0_10px_-3px_rgba(0,0,0,0.1)] w-[120px] md:w-[160px] overflow-hidden text-ellipsis">
+                                            <span className="hidden sm:inline">{formatNameDesktop(emp.name, emp.surname)}</span>
+                                            <span className="inline sm:hidden">{formatNameMobile(emp.name, emp.surname)}</span>
+                                        </td>
+                                        
+                                        {/* Celdas de Días (Inputs) */}
+                                        {days.map((day, i) => {
+                                            const dateStr = format(day, 'yyyy-MM-dd');
+                                            const key = `${emp.id}_${dateStr}`;
+                                            const val = gridData[key]?.duration || 0;
+                                            rowTotal += val;
+
+                                            return (
+                                                <td key={i} className={`p-1.5 text-center ${i === 6 ? 'border-r-2 border-gray-300' : ''}`}>
+                                                    <input 
+                                                        type="number" min="0" step="0.01" disabled={!isEditing}
+                                                        value={val === 0 ? '' : val}
+                                                        placeholder={isEditing && val === 0 ? '-' : ''}
+                                                        onChange={(e) => handleCellChange(emp.id, dateStr, e.target.value)}
+                                                        className={`w-full h-11 md:h-12 text-center rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm md:text-base ${
+                                                            isEditing ? 'border border-gray-300 bg-white hover:border-indigo-400 shadow-sm' : 'bg-transparent border-none text-gray-800 cursor-default'
+                                                        } ${val > 0 && !isEditing ? 'font-black text-indigo-600 bg-indigo-50/30' : ''}`}
+                                                    />
+                                                </td>
+                                            );
+                                        })}
+                                        
+                                        {/* Celda Fija de Total Fila */}
+                                        <td className="px-3 py-3 md:py-4 whitespace-nowrap text-sm font-bold text-gray-800 text-center sticky right-0 z-20 bg-gray-50 group-hover:bg-indigo-50/80 transition-colors border-l-2 border-gray-100 shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.1)] w-[80px]">
+                                            {rowTotal.toFixed(2)}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        <tfoot className="bg-gray-100 font-bold text-gray-800 border-t-4 border-gray-300">
+                            <tr>
+                                {/* Celda Fija de Empleado (Footer) */}
+                                <td className="px-3 md:px-4 py-4 sticky left-0 z-30 bg-gray-200 border-r-2 border-gray-300 shadow-[4px_0_10px_-3px_rgba(0,0,0,0.15)] text-xs md:text-sm">
+                                    TOTALES
                                 </td>
-                            ))}
-                            <td className="text-center py-2 px-3 sticky right-0 bg-gray-100 z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] text-indigo-700 text-sm">
-                                {grandTotalPeriod.toFixed(2)}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
+                                
+                                {/* Celdas de Días (Footer) */}
+                                {dailyTotals.map((total, i) => (
+                                    <td key={i} className={`text-center py-4 px-1 text-xs md:text-sm text-gray-700 ${i === 6 ? 'border-r-2 border-gray-300' : ''}`}>
+                                        {total > 0 ? total.toFixed(2) : '-'}
+                                    </td>
+                                ))}
+                                
+                                {/* Celda Fija de Gran Total (Footer) */}
+                                <td className="text-center py-4 px-3 sticky right-0 z-30 bg-indigo-100 border-l-2 border-indigo-200 shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.15)] text-indigo-800 text-sm md:text-base font-black w-[80px]">
+                                    {grandTotalPeriod.toFixed(2)}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
 
-            {/* MODAL PARA GUARDAR TABLA */}
+            {/* MODALES */}
             <Modal isOpen={showModal} onClose={() => setShowModal(false)} onConfirm={confirmSave} title="Confirmar Cambios">
                 <div className="max-h-60 overflow-y-auto pr-2">
                     <p className="mb-4 text-sm text-gray-600">Revisa los cambios antes de guardar:</p>
@@ -548,7 +616,6 @@ function TableEditorView({ onBack }) {
                 </div>
             </Modal>
 
-            {/* MODAL: CONFIRMAR CIERRE DE PERIODO Y EMISIÓN */}
             <Modal 
                 isOpen={showCloseModal} 
                 onClose={() => setShowCloseModal(false)} 
@@ -583,7 +650,6 @@ function TableEditorView({ onBack }) {
                 </div>
             </Modal>
 
-            {/* MODAL DE NOTIFICACIÓN / FEEDBACK (Sustituye a alert()) */}
             {feedback.isOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all animate-fade-in-up">

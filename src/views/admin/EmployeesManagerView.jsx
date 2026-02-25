@@ -300,7 +300,7 @@ function EmployeesManagerView({ onBack }) {
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex justify-end gap-2">
                                                     <button onClick={() => toggleStatus(emp)} className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${emp.active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
-                                                        {emp.active ? 'Baja' : 'Alta'}
+                                                        {emp.active ? 'Desactivar' : 'Activar'}
                                                     </button>
                                                     <button onClick={() => handleEdit(emp)} className="text-indigo-600 hover:bg-indigo-50 px-4 py-1.5 rounded-lg font-bold text-xs transition-colors">
                                                         Editar
